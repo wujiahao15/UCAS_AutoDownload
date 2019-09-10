@@ -58,6 +58,7 @@ class Ui(QDialog):
         self.showCertImage()
         # initialize the status of the progress bar
         self.ui.progressBar.setRange(0, 0)
+        self.ui.subProgressBar.setRange(0, 0)
         # set window title
         self.setWindowTitle("批量下载课件脚本")
 
@@ -100,6 +101,10 @@ class Ui(QDialog):
         self.ui.progressBar.setValue(signalDict["value"])
         self.ui.progressInfo.setText(signalDict["text"])
 
+    def updateSubProgress(self, signalDict):
+        self.ui.subProgressBar.setRange(0, signalDict["max"])
+        self.ui.subProgressBar.setValue(signalDict["value"])
+
     def killDownloadThread(self):
         self.downloadThread.terminate()
 
@@ -108,6 +113,7 @@ class Ui(QDialog):
         self.ui.progressBar.setRange(0, len(self.coursesList))
         self.downloadThread = DownloadThread(self.sess, self.coursesList, self.downloadPath)
         self.downloadThread.updateUiSignal.connect(self.updateProgress)
+        self.downloadThread.updateSubBar.connect(self.updateSubProgress)
         self.downloadThread.killSignal.connect(self.killDownloadThread)
         self.downloadThread.start()
 

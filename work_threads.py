@@ -115,6 +115,7 @@ class GetCourseThread(QThread):
 
 class DownloadThread(QThread):
     updateUiSignal = pyqtSignal(dict)
+    updateSubBar = pyqtSignal(dict)
     killSignal = pyqtSignal()
 
     def __init__(self, session, courseList, path):
@@ -134,16 +135,12 @@ class DownloadThread(QThread):
                 os.removedirs(d)
 
     def run(self):
-        outStr = ""
         for i, course in enumerate(self.coursesList):
-            outStr += "正在下载{:s}的课件...\n".format(course["name"])
-            self.updateUiSignal.emit({"value": i+1, "text": outStr})
-            self.downloadCourseware(course)
-        outStr = "下载完毕！\n"
+            self.downloadCourseware(i+1, course)
         self.updateUiSignal.emit(
-            {"value": len(self.coursesList), "text": outStr})
-        self.deleteEmptyDirs()
-        self.killSignal.emit()
+            {"value": len(self.coursesList), "text": "下载完毕！"})
+        # self.deleteEmptyDirs()
+        # self.killSignal.emit()
 
     def reDirectToResourcePage(self, courseUrl):
         """ Redirect page to resource page.
@@ -293,7 +290,7 @@ class DownloadThread(QThread):
             for chunk in res.iter_content(chunk_size=512):
                 f.write(chunk)
 
-    def downloadCourseware(self, courseInfo):
+    def downloadCourseware(self, idx, courseInfo):
         """ Download courseware of single course.
         Given by the url of the course main page, download all the coursewares of this course.
 
@@ -308,11 +305,17 @@ class DownloadThread(QThread):
         """
         self.resourceInfos = []
         courseDir = os.path.join(self.downloadPath, courseInfo["name"])
-        if not os.path.exists(courseDir):
-            os.makedirs(courseDir)
+        
         resourcePageObj = self.reDirectToResourcePage(courseInfo["url"])
         self.getUnfoldPostPattern(resourcePageObj)
         self.getResourceInfos(resourcePageObj)
+        resourceNum = len(self.resourceInfos)
+        if resourceNum > 0:
+            if not os.path.exists(courseDir):
+                os.makedirs(courseDir)
+            outStr = "正在下载{:s}的课件...\n".format(courseInfo["name"])
+            self.updateUiSignal.emit({"value": idx, "text": outStr})
+            self.updateSubBar.emit({"value": 0, "max": resourceNum})
         for i, resourceInfo in enumerate(self.resourceInfos):
             # print("sub folder: {:s}".format(resourceInfo["subDir"]))
             subDirName = os.path.join(courseDir, resourceInfo["subDir"])
@@ -320,4 +323,5 @@ class DownloadThread(QThread):
                 os.makedirs(subDirName)
             fileName = os.path.join(subDirName, resourceInfo["fileName"])
             # print("File name: {:s}\nFile url: {:s}".format(fileName, resourceInfo["url"]))
+            self.updateSubBar.emit({"value": i+1, "max": resourceNum})
             self.downloadFile(fileName, resourceInfo["url"])

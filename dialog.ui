@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>452</width>
-    <height>494</height>
+    <height>524</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -81,7 +81,7 @@
      <widget class="QGraphicsView" name="certImage">
       <property name="maximumSize">
        <size>
-        <width>150</width>
+        <width>102</width>
         <height>32</height>
        </size>
       </property>
@@ -91,8 +91,8 @@
      <widget class="QLineEdit" name="certCode">
       <property name="maximumSize">
        <size>
-        <width>150</width>
-        <height>20</height>
+        <width>100</width>
+        <height>22</height>
        </size>
       </property>
       <property name="text">
@@ -108,7 +108,7 @@
      <x>20</x>
      <y>220</y>
      <width>411</width>
-     <height>121</height>
+     <height>151</height>
     </rect>
    </property>
   </widget>
@@ -225,9 +225,9 @@
   <widget class="QProgressBar" name="progressBar">
    <property name="geometry">
     <rect>
-     <x>20</x>
-     <y>350</y>
-     <width>411</width>
+     <x>100</x>
+     <y>380</y>
+     <width>331</width>
      <height>23</height>
     </rect>
    </property>
@@ -239,10 +239,36 @@
    <property name="geometry">
     <rect>
      <x>20</x>
-     <y>380</y>
+     <y>440</y>
      <width>411</width>
-     <height>101</height>
+     <height>71</height>
     </rect>
+   </property>
+  </widget>
+  <widget class="QLabel" name="label_3">
+   <property name="geometry">
+    <rect>
+     <x>24</x>
+     <y>397</y>
+     <width>59</width>
+     <height>16</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>下载进度：</string>
+   </property>
+  </widget>
+  <widget class="QProgressBar" name="subProgressBar">
+   <property name="geometry">
+    <rect>
+     <x>100</x>
+     <y>410</y>
+     <width>331</width>
+     <height>23</height>
+    </rect>
+   </property>
+   <property name="value">
+    <number>24</number>
    </property>
   </widget>
  </widget>
