@@ -11,15 +11,16 @@
 
 ### Windows
 
-1. 可以使用本项目中发布的[Release](https://github.com/flamywhale/UCAS_AutoDownload/releases)。
-2. 也可以使用命令运行python代码。
+1. 确保`Python`的路径在系统环境变量中。
+2. 打开该项目的文件夹，在地址栏输入`CMD`后，在打开的`CMD`中输入：`scripts\WindowsInstall.bat`
+3. 点击`main.exe`即可运行
 
 ### MacOs
 
 ``` bash
 # 确保当前目录为 UCAS_AutoDownload
-chmod +x scripts/install.sh
-chmod +x scripts/run.sh
-./scripts/install.sh
-./scripts/run.sh
+chmod +x scripts/MacOS_Install.sh
+chmod +x scripts/MacOS_Run.sh
+./scripts/MacOS_Install.sh
+./scripts/MacOS_Run.sh
 ```
