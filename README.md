@@ -19,8 +19,8 @@
 
 ``` bash
 # 确保当前目录为 UCAS_AutoDownload
-chmod +x scripts/MacOS_Install.sh
-chmod +x scripts/MacOS_Run.sh
+## 先安装需要的环境
 ./scripts/MacOS_Install.sh
+## 运行↓
 ./scripts/MacOS_Run.sh
 ```
