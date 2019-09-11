@@ -105,11 +105,14 @@ class Ui(QDialog):
 
     def onClickChoosePath(self):
         """ Choose the path to store coursewares. """
-        self.downloadPath = QFileDialog.getExistingDirectory(
+        path = QFileDialog.getExistingDirectory(
             self, "选择文件夹", ".")
+        if path == "":
+            self.ui.showPath.setText("请选择文件夹~！")
+            return
+        self.downloadPath = path
         self.ui.showPath.setText(self.downloadPath)
         self.ui.choosePath.setDefault(False)
-        self.updateConfig()
 
     def updateProgress(self, signalDict):
         self.ui.progressBar.setValue(signalDict["value"])
@@ -147,6 +150,7 @@ class Ui(QDialog):
 
     def onClickGetCourses(self):
         """ Get all the course information. """
+        self.updateConfig()
         self.getCoursesThread = GetCourseThread(self.sess)
         self.getCoursesThread.getCourseSignal.connect(self.updateCoursesList)
         self.getCoursesThread.finishSignal.connect(self.killCourseThread)
