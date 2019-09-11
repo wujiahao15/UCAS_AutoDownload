@@ -20,7 +20,9 @@ class Ui(QDialog):
     def __init__(self):
         super(Ui, self).__init__()
         self.downloadPath = os.path.abspath('.')
+        self.configParser = configparser.ConfigParser()
         self.configPath = "config"
+        self.md5LogName = os.path.join(self.configPath, "md5log.json")
         if not os.path.exists(self.configPath):
             os.makedirs(self.configPath)
         self.confName = os.path.join(self.configPath,"cache.cfg")
@@ -51,25 +53,25 @@ class Ui(QDialog):
         self.ui.progressInfo.setReadOnly(True)
         self.ui.certCode.setPlaceholderText("请输入验证码")
         self.ui.hintInfo.setText("以下是你选修的课程：")
-        self.ui.showPath.setText(self.downloadPath)
         # check login configurations
         self.checkConf()
+        self.ui.showPath.setText(self.downloadPath)
         # show the certification code image
         self.showCertImage()
         # initialize the status of the progress bar
         self.ui.progressBar.setRange(0, 0)
         self.ui.subProgressBar.setRange(0, 0)
         # set window title
-        self.setWindowTitle("批量下载课件脚本")
+        self.setWindowTitle("UCAS Coursewares AutoDownloader")
 
     def checkConf(self):
         """ Check login configurations """
         if not os.path.exists(self.confName):
             return
-        conf = configparser.ConfigParser()
-        conf.read(self.confName)
-        username = conf.get('Default', 'usrname')
-        password = conf.get('Default', 'passwd')
+        self.configParser.read(self.confName)
+        username = self.configParser.get('Default', 'usrname')
+        password = self.configParser.get('Default', 'passwd')
+        self.downloadPath = self.configParser.get('Default', 'downloadPath')
         self.ui.userName.setText(username)
         self.ui.passwd.setText(password)
         self.ui.remPasswd.setChecked(True)
@@ -95,7 +97,14 @@ class Ui(QDialog):
             self, "选择文件夹", ".")
         self.ui.showPath.setText(self.downloadPath)
         self.ui.choosePath.setDefault(False)
-        self.ui.getCourses.setDefault(True)
+        if self.ui.remPasswd.isChecked():
+            self.configParser['Default'] = {
+                'usrname': self.login["userName"],
+                'passwd': self.login["pwd"],
+                'downloadPath': self.downloadPath
+            }
+            with open(self.confName, 'w') as f:
+                self.configParser.write(f)
 
     def updateProgress(self, signalDict):
         self.ui.progressBar.setValue(signalDict["value"])
@@ -106,12 +115,14 @@ class Ui(QDialog):
         self.ui.subProgressBar.setValue(signalDict["value"])
 
     def killDownloadThread(self):
+        self.ui.downloadAll.setEnabled(False)
         self.downloadThread.terminate()
 
     def onClickDownloadAll(self):
         """ Download all the coursewares of all courses after catch the click. """
         self.ui.progressBar.setRange(0, len(self.coursesList))
-        self.downloadThread = DownloadThread(self.sess, self.coursesList, self.downloadPath)
+        self.downloadThread = DownloadThread(
+            self.sess, self.coursesList, self.downloadPath, self.md5LogName)
         self.downloadThread.updateUiSignal.connect(self.updateProgress)
         self.downloadThread.updateSubBar.connect(self.updateSubProgress)
         self.downloadThread.killSignal.connect(self.killDownloadThread)
@@ -155,15 +166,7 @@ class Ui(QDialog):
         self.login["certCode"] = self.ui.certCode.text()
         self.login["sb"] = "sb"
         self.login["rememberMe"] = "1"
-        print(self.login)
-        if self.ui.remPasswd.isChecked():
-            config = configparser.ConfigParser()
-            config['Default'] = {
-                'usrname': self.login["userName"],
-                'passwd': self.login["pwd"]
-            }
-            with open(self.confName, 'w') as f:
-                config.write(f)
+        # print(self.login)
         self.loginThread = LoginThread(self.sess, self.login)
         self.loginThread.loginSignal.connect(self.updateLogInfoText)
         self.loginThread.failSignal.connect(self.failToLogin)

@@ -1,11 +1,13 @@
 import os
 import re
+import json
+import hashlib
 from urllib import parse
 from bs4 import BeautifulSoup
 from PyQt5.QtGui import (QImage, QPixmap)
 from PyQt5.QtCore import (QThread, pyqtSignal)
 from PyQt5.QtWidgets import (QGraphicsScene,
-                             QGraphicsPixmapItem,)
+                             QGraphicsPixmapItem)
 from PIL import Image
 from PIL.ImageQt import ImageQt
 
@@ -118,11 +120,16 @@ class DownloadThread(QThread):
     updateSubBar = pyqtSignal(dict)
     killSignal = pyqtSignal()
 
-    def __init__(self, session, courseList, path):
+    def __init__(self, session, courseList, path, md5log):
         super(DownloadThread, self).__init__()
         self.sess = session
         self.coursesList = courseList
         self.downloadPath = path
+        self.md5dict = {}
+        self.md5log = md5log
+        if os.path.exists(self.md5log):
+            with open(self.md5log, "r") as f:
+                self.md5dict = json.load(f)
 
     def isDirEmpty(self, directory):
         return (len(os.listdir(directory)) == 0)
@@ -138,9 +145,9 @@ class DownloadThread(QThread):
         for i, course in enumerate(self.coursesList):
             self.downloadCourseware(i+1, course)
         self.updateUiSignal.emit(
-            {"value": len(self.coursesList), "text": "下载完毕！"})
+            {"value": len(self.coursesList), "text": "下载并更新完毕！"})
         # self.deleteEmptyDirs()
-        # self.killSignal.emit()
+        self.killSignal.emit()
 
     def reDirectToResourcePage(self, courseUrl):
         """ Redirect page to resource page.
@@ -272,6 +279,21 @@ class DownloadThread(QThread):
         self.sakai_csrf_token = resourcePageObj.find(
             'input', {'name': 'sakai_csrf_token'}).get('value')
 
+    def md5sum(self, fileName):
+        def readChunks(fp):
+            fp.seek(0)
+            chunk = fp.read(8096)
+            while chunk:
+                yield chunk
+                chunk = fp.read(8096)
+            else:
+                fp.seek(0)
+        m = hashlib.md5()
+        with open(fileName, "rb") as f:
+            for chunk in readChunks(f):
+                m.update(chunk)
+        return m.hexdigest()
+
     def downloadFile(self, fileName, resourceUrl):
         """ Download file from the given url.
         Get the file from the given url and write it as local file.
@@ -283,12 +305,20 @@ class DownloadThread(QThread):
         Returns:
             None
         """
+        md5sum = 0
         if os.path.exists(fileName):
-            return
+            md5sum = self.md5dict[fileName]
         res = self.sess.get(resourceUrl)
+        UrlFileMd5 = hashlib.md5()
+        for chunk in res.iter_content(chunk_size=512):
+            UrlFileMd5.update(chunk)
+        if md5sum == UrlFileMd5.hexdigest():
+            return "{:s} 未更新.".format(os.path.basename(fileName))
+        self.md5dict[fileName] = UrlFileMd5.hexdigest()
         with open(fileName, "wb") as f:
             for chunk in res.iter_content(chunk_size=512):
                 f.write(chunk)
+        return "{:s} 已下载完毕。".format(os.path.basename(fileName))
 
     def downloadCourseware(self, idx, courseInfo):
         """ Download courseware of single course.
@@ -303,9 +333,10 @@ class DownloadThread(QThread):
         Returns:
             None
         """
+        # Get Course directory
         self.resourceInfos = []
         courseDir = os.path.join(self.downloadPath, courseInfo["name"])
-        
+        # redirect to the resource page of the course website
         resourcePageObj = self.reDirectToResourcePage(courseInfo["url"])
         self.getUnfoldPostPattern(resourcePageObj)
         self.getResourceInfos(resourcePageObj)
@@ -324,4 +355,7 @@ class DownloadThread(QThread):
             fileName = os.path.join(subDirName, resourceInfo["fileName"])
             # print("File name: {:s}\nFile url: {:s}".format(fileName, resourceInfo["url"]))
             self.updateSubBar.emit({"value": i+1, "max": resourceNum})
-            self.downloadFile(fileName, resourceInfo["url"])
+            outStr = self.downloadFile(fileName, resourceInfo["url"])
+            self.updateUiSignal.emit({"value": idx, "text": outStr})
+        with open(self.md5log, "w") as f:
+            json.dump(self.md5dict, f)
