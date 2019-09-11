@@ -93,12 +93,7 @@ class Ui(QDialog):
         self.certCodeThread.killSignal.connect(self.killShowCertCode)
         self.certCodeThread.start()
 
-    def onClickChoosePath(self):
-        """ Choose the path to store coursewares. """
-        self.downloadPath = QFileDialog.getExistingDirectory(
-            self, "选择文件夹", ".")
-        self.ui.showPath.setText(self.downloadPath)
-        self.ui.choosePath.setDefault(False)
+    def updateConfig(self):
         if self.ui.remPasswd.isChecked():
             self.configParser['Default'] = {
                 'usrname': self.login["userName"],
@@ -107,6 +102,14 @@ class Ui(QDialog):
             }
             with open(self.confName, 'w') as f:
                 self.configParser.write(f)
+
+    def onClickChoosePath(self):
+        """ Choose the path to store coursewares. """
+        self.downloadPath = QFileDialog.getExistingDirectory(
+            self, "选择文件夹", ".")
+        self.ui.showPath.setText(self.downloadPath)
+        self.ui.choosePath.setDefault(False)
+        self.updateConfig()
 
     def updateProgress(self, signalDict):
         self.ui.progressBar.setValue(signalDict["value"])
@@ -173,6 +176,7 @@ class Ui(QDialog):
         self.login["sb"] = "sb"
         self.login["rememberMe"] = "1"
         # print(self.login)
+        self.updateConfig()
         self.loginThread = LoginThread(self.sess, self.login)
         self.loginThread.loginSignal.connect(self.updateLogInfoText)
         self.loginThread.failSignal.connect(self.failToLogin)
