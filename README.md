@@ -15,7 +15,7 @@
 2. 打开该项目的文件夹，在地址栏输入`CMD`后，在打开的`CMD`中输入：`scripts\WindowsInstall.bat`
 3. 点击`main.exe`即可运行
 
-### MacOs
+### MacOS (Use Python script)
 
 ``` bash
 # 确保当前目录为 UCAS_AutoDownload
