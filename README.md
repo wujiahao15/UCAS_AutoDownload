@@ -9,7 +9,7 @@
 
 ## Usage
 
-### Windows
+### Windows (Build From Source)
 
 1. 确保`Python`的路径在系统环境变量中。
 2. 打开该项目的文件夹，在地址栏输入`CMD`后，在打开的`CMD`中输入：`scripts\WindowsInstall.bat`
