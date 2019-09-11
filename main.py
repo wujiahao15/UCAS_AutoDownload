@@ -8,9 +8,11 @@ import configparser
 
 from urllib import parse
 from bs4 import BeautifulSoup
+from PyQt5.QtCore import QFile, QTextStream
 from PyQt5.QtGui import (QImage, QPixmap)
 from PyQt5.QtWidgets import (QLineEdit, QDialog, QApplication, QFileDialog)
 
+import breeze_resources
 from dialog import Ui_Dialog
 from work_threads import (LoginThread, DownloadThread,
                           GetCourseThread, CertCodeThread)
@@ -152,6 +154,10 @@ class Ui(QDialog):
     def updateLogInfoText(self, signalDict):
         self.ui.logInfo.setText(signalDict["text"])
         self.sess = signalDict["session"]
+        self.ui.certCode.setReadOnly(True)
+        self.ui.userName.setReadOnly(True)
+        self.ui.passwd.setReadOnly(True)
+        self.ui.remPasswd.setDisabled(True)
         self.ui.getCourses.setEnabled(True)
         self.loginThread.terminate()
     
@@ -175,5 +181,10 @@ class Ui(QDialog):
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
+    # set stylesheet
+    file = QFile(":/light.qss")
+    file.open(QFile.ReadOnly | QFile.Text)
+    stream = QTextStream(file)
+    app.setStyleSheet(stream.readAll())
     window = Ui()
     sys.exit(app.exec_())

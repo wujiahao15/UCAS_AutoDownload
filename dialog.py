@@ -2,11 +2,13 @@
 
 # Form implementation generated from reading ui file 'dialog.ui'
 #
-# Created by: PyQt5 UI code generator 5.9.2
+# Created by: PyQt5 UI code generator 5.13.0
 #
 # WARNING! All changes made in this file will be lost!
 
+
 from PyQt5 import QtCore, QtGui, QtWidgets
+
 
 class Ui_Dialog(object):
     def setupUi(self, Dialog):
@@ -37,9 +39,9 @@ class Ui_Dialog(object):
         self.passwd.setObjectName("passwd")
         self.horizontalLayout_2.addWidget(self.passwd)
         self.logInfo = QtWidgets.QTextEdit(Dialog)
-        self.logInfo.setGeometry(QtCore.QRect(370, 30, 241, 71))
+        self.logInfo.setGeometry(QtCore.QRect(370, 30, 241, 150))
         font = QtGui.QFont()
-        font.setPointSize(15)
+        font.setPointSize(10)
         self.logInfo.setFont(font)
         self.logInfo.viewport().setProperty("cursor", QtGui.QCursor(QtCore.Qt.ForbiddenCursor))
         self.logInfo.setObjectName("logInfo")
@@ -65,7 +67,7 @@ class Ui_Dialog(object):
         self.coursesList.setGeometry(QtCore.QRect(20, 340, 601, 201))
         self.coursesList.setObjectName("coursesList")
         self.hintInfo = QtWidgets.QLabel(Dialog)
-        self.hintInfo.setGeometry(QtCore.QRect(260, 320, 121, 16))
+        self.hintInfo.setGeometry(QtCore.QRect(190, 320, 271, 20))
         self.hintInfo.setText("")
         self.hintInfo.setObjectName("hintInfo")
         self.horizontalLayoutWidget_5 = QtWidgets.QWidget(Dialog)
@@ -89,10 +91,10 @@ class Ui_Dialog(object):
         self.showPath.setText("")
         self.showPath.setObjectName("showPath")
         self.remPasswd = QtWidgets.QCheckBox(Dialog)
-        self.remPasswd.setGeometry(QtCore.QRect(20, 150, 116, 23))
+        self.remPasswd.setGeometry(QtCore.QRect(20, 150, 101, 23))
         self.remPasswd.setObjectName("remPasswd")
         self.loginButton = QtWidgets.QPushButton(Dialog)
-        self.loginButton.setGeometry(QtCore.QRect(365, 110, 251, 31))
+        self.loginButton.setGeometry(QtCore.QRect(130, 150, 221, 31))
         self.loginButton.setObjectName("loginButton")
         self.progressBar = QtWidgets.QProgressBar(Dialog)
         self.progressBar.setGeometry(QtCore.QRect(130, 555, 481, 23))
@@ -128,4 +130,3 @@ class Ui_Dialog(object):
         self.loginButton.setText(_translate("Dialog", "登陆"))
         self.label_3.setText(_translate("Dialog", "下载进度："))
         self.label_4.setText(_translate("Dialog", "See: https://github.com/flamywhale/UCAS_AutoDownload"))
-
