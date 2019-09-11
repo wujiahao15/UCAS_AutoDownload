@@ -11,11 +11,15 @@
 
 ### Windows
 
-1. 可以使用本项目中发布的Release。
-2. 也可以使用[命令](###MacOS)运行python代码。
+1. 可以使用本项目中发布的[Release](https://github.com/flamywhale/UCAS_AutoDownload/releases)。
+2. 也可以使用命令运行python代码。
 
 ### MacOs
 
-* `pip install -r requirements.txt`
-* `pyuic5 dialog.ui -o dialog.py`
-* `python main.py`
+``` bash
+# 确保当前目录为 UCAS_AutoDownload
+chmod +x scripts/install.sh
+chmod +x scripts/run.sh
+./scripts/install.sh
+./scripts/run.sh
+```
