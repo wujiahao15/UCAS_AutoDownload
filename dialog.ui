@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>452</width>
-    <height>524</height>
+    <width>631</width>
+    <height>747</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -17,9 +17,9 @@
    <property name="geometry">
     <rect>
      <x>20</x>
-     <y>10</y>
-     <width>231</width>
-     <height>23</height>
+     <y>20</y>
+     <width>331</width>
+     <height>41</height>
     </rect>
    </property>
    <layout class="QHBoxLayout" name="horizontalLayout">
@@ -39,9 +39,9 @@
    <property name="geometry">
     <rect>
      <x>20</x>
-     <y>30</y>
-     <width>231</width>
-     <height>31</height>
+     <y>60</y>
+     <width>331</width>
+     <height>41</height>
     </rect>
    </property>
    <layout class="QHBoxLayout" name="horizontalLayout_2">
@@ -60,20 +60,28 @@
   <widget class="QTextEdit" name="logInfo">
    <property name="geometry">
     <rect>
-     <x>260</x>
-     <y>12</y>
-     <width>171</width>
-     <height>112</height>
+     <x>370</x>
+     <y>30</y>
+     <width>241</width>
+     <height>71</height>
     </rect>
+   </property>
+   <property name="font">
+    <font>
+     <pointsize>15</pointsize>
+    </font>
+   </property>
+   <property name="cursor" stdset="0">
+    <cursorShape>ForbiddenCursor</cursorShape>
    </property>
   </widget>
   <widget class="QWidget" name="horizontalLayoutWidget_3">
    <property name="geometry">
     <rect>
      <x>20</x>
-     <y>60</y>
-     <width>231</width>
-     <height>41</height>
+     <y>100</y>
+     <width>331</width>
+     <height>44</height>
     </rect>
    </property>
    <layout class="QHBoxLayout" name="horizontalLayout_3">
@@ -84,6 +92,13 @@
         <width>102</width>
         <height>32</height>
        </size>
+      </property>
+     </widget>
+    </item>
+    <item>
+     <widget class="QPushButton" name="refreshCertCode">
+      <property name="text">
+       <string>刷新验证码</string>
       </property>
      </widget>
     </item>
@@ -106,17 +121,17 @@
    <property name="geometry">
     <rect>
      <x>20</x>
-     <y>220</y>
-     <width>411</width>
-     <height>151</height>
+     <y>340</y>
+     <width>601</width>
+     <height>201</height>
     </rect>
    </property>
   </widget>
   <widget class="QLabel" name="hintInfo">
    <property name="geometry">
     <rect>
-     <x>170</x>
-     <y>200</y>
+     <x>260</x>
+     <y>320</y>
      <width>121</width>
      <height>16</height>
     </rect>
@@ -129,8 +144,8 @@
    <property name="geometry">
     <rect>
      <x>20</x>
-     <y>162</y>
-     <width>411</width>
+     <y>270</y>
+     <width>601</width>
      <height>41</height>
     </rect>
    </property>
@@ -151,32 +166,19 @@
     </item>
    </layout>
   </widget>
-  <widget class="QPushButton" name="refreshCertCode">
-   <property name="geometry">
-    <rect>
-     <x>95</x>
-     <y>100</y>
-     <width>91</width>
-     <height>31</height>
-    </rect>
-   </property>
-   <property name="text">
-    <string>刷新验证码</string>
-   </property>
-  </widget>
   <widget class="QPushButton" name="choosePath">
    <property name="geometry">
     <rect>
-     <x>15</x>
-     <y>132</y>
-     <width>120</width>
-     <height>25</height>
+     <x>20</x>
+     <y>190</y>
+     <width>200</width>
+     <height>40</height>
     </rect>
    </property>
    <property name="maximumSize">
     <size>
-     <width>120</width>
-     <height>25</height>
+     <width>200</width>
+     <height>40</height>
     </size>
    </property>
    <property name="text">
@@ -186,9 +188,9 @@
   <widget class="QLabel" name="showPath">
    <property name="geometry">
     <rect>
-     <x>140</x>
-     <y>126</y>
-     <width>291</width>
+     <x>30</x>
+     <y>230</y>
+     <width>591</width>
      <height>41</height>
     </rect>
    </property>
@@ -200,7 +202,7 @@
    <property name="geometry">
     <rect>
      <x>20</x>
-     <y>103</y>
+     <y>150</y>
      <width>116</width>
      <height>23</height>
     </rect>
@@ -212,9 +214,9 @@
   <widget class="QPushButton" name="loginButton">
    <property name="geometry">
     <rect>
-     <x>185</x>
-     <y>100</y>
-     <width>71</width>
+     <x>365</x>
+     <y>110</y>
+     <width>251</width>
      <height>31</height>
     </rect>
    </property>
@@ -225,9 +227,9 @@
   <widget class="QProgressBar" name="progressBar">
    <property name="geometry">
     <rect>
-     <x>100</x>
-     <y>380</y>
-     <width>331</width>
+     <x>130</x>
+     <y>555</y>
+     <width>481</width>
      <height>23</height>
     </rect>
    </property>
@@ -239,19 +241,19 @@
    <property name="geometry">
     <rect>
      <x>20</x>
-     <y>440</y>
-     <width>411</width>
-     <height>71</height>
+     <y>620</y>
+     <width>601</width>
+     <height>91</height>
     </rect>
    </property>
   </widget>
   <widget class="QLabel" name="label_3">
    <property name="geometry">
     <rect>
-     <x>24</x>
-     <y>397</y>
-     <width>59</width>
-     <height>16</height>
+     <x>28</x>
+     <y>560</y>
+     <width>81</width>
+     <height>41</height>
     </rect>
    </property>
    <property name="text">
@@ -261,14 +263,27 @@
   <widget class="QProgressBar" name="subProgressBar">
    <property name="geometry">
     <rect>
-     <x>100</x>
-     <y>410</y>
-     <width>331</width>
+     <x>130</x>
+     <y>585</y>
+     <width>481</width>
      <height>23</height>
     </rect>
    </property>
    <property name="value">
     <number>24</number>
+   </property>
+  </widget>
+  <widget class="QLabel" name="label_4">
+   <property name="geometry">
+    <rect>
+     <x>130</x>
+     <y>720</y>
+     <width>351</width>
+     <height>20</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>See: https://github.com/flamywhale/UCAS_AutoDownload</string>
    </property>
   </widget>
  </widget>
