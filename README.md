@@ -17,7 +17,7 @@
 
 #### Roadmap 
 
-[ ] windows下编译成`exe`可执行文件，并通过多台PC设备的测试。
+* [ ] windows下编译成`exe`可执行文件，并通过多台PC设备的测试。
 
 ### MacOS (Use Python script)
 
