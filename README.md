@@ -12,11 +12,12 @@
 ### Windows (Build From Source)
 
 1. 确保`Python`的路径在系统环境变量中。
-2. 打开该项目的文件夹，在地址栏输入`CMD`后，在打开的`CMD`中输入：`scripts\WindowsInstall.bat`
-3. 点击`main.exe`即可运行
+2. 打开该项目的文件夹，在地址栏输入`CMD`后，在打开的`CMD`中输入：`scripts\Windows_Install.bat`
+3. 接着在`CMD`中输入`scripts\Windows_Setup.bat`即可运行。
 
 ### MacOS (Use Python script)
 
+打开Mac的终端，cd到`UCAS_AutoDownload`目录下，在终端中执行以下命令。
 ``` bash
 # 确保当前目录为 UCAS_AutoDownload
 ## 先安装需要的环境
