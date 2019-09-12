@@ -28,7 +28,6 @@ class Ui(QDialog):
         if not os.path.exists(self.configPath):
             os.makedirs(self.configPath)
         self.confName = os.path.join(self.configPath,"cache.cfg")
-        self.certImageName = os.path.join(self.configPath, "certcode.jpg")
         self.login = {}
         self.coursesList = []
         self.resourceInfos = []
@@ -53,7 +52,7 @@ class Ui(QDialog):
         self.ui.downloadAll.setEnabled(False)
         self.ui.logInfo.setReadOnly(True)
         self.ui.progressInfo.setReadOnly(True)
-        self.ui.certCode.setPlaceholderText("请输入验证码")
+        self.ui.certCode.setPlaceholderText("验证码")
         self.ui.hintInfo.setText("以下是你选修的课程：")
         # check login configurations
         self.checkConf()
@@ -63,6 +62,7 @@ class Ui(QDialog):
         # initialize the status of the progress bar
         self.ui.progressBar.setRange(0, 0)
         self.ui.subProgressBar.setRange(0, 0)
+        self.ui.fileProcessBar.setRange(0, 0)
         # set window title
         self.setWindowTitle("UCAS Coursewares AutoDownloader")
 
@@ -78,22 +78,8 @@ class Ui(QDialog):
         self.ui.passwd.setText(password)
         self.ui.remPasswd.setChecked(True)
 
-    def updateCertCode(self, signalDict):
-        self.ui.logInfo.setText(signalDict["text"])
-        if signalDict["scene"] != "":
-            self.ui.certImage.setScene(signalDict["scene"])
-
-    def killShowCertCode(self):
-        self.certCodeThread.terminate()
-
-    def showCertImage(self):
-        """ Show the certification image on the UI. """
-        self.certCodeThread = CertCodeThread(self.sess, self.certImageName)
-        self.certCodeThread.updateUiSignal.connect(self.updateCertCode)
-        self.certCodeThread.killSignal.connect(self.killShowCertCode)
-        self.certCodeThread.start()
-
     def updateConfig(self):
+        """ Update config file. """
         if self.ui.remPasswd.isChecked():
             self.configParser['Default'] = {
                 'usrname': self.login["userName"],
@@ -103,74 +89,22 @@ class Ui(QDialog):
             with open(self.confName, 'w') as f:
                 self.configParser.write(f)
 
-    def onClickChoosePath(self):
-        """ Choose the path to store coursewares. """
-        path = QFileDialog.getExistingDirectory(
-            self, "选择文件夹", ".")
-        if path == "":
-            self.ui.showPath.setText("请选择文件夹~！")
-            return
-        self.downloadPath = path
-        self.ui.showPath.setText(self.downloadPath)
-        self.ui.choosePath.setDefault(False)
+    def showCertImage(self):
+        """ Show the certification image on the UI. """
+        self.certCodeThread = CertCodeThread(self.sess)
+        self.certCodeThread.updateUiSignal.connect(self.updateCertCode)
+        self.certCodeThread.killSignal.connect(self.killShowCertCode)
+        self.certCodeThread.start()
 
-    def updateProgress(self, signalDict):
-        self.ui.progressBar.setValue(signalDict["value"])
-        self.ui.progressInfo.setText(signalDict["text"])
-
-    def updateSubProgress(self, signalDict):
-        self.ui.subProgressBar.setRange(0, signalDict["max"])
-        self.ui.subProgressBar.setValue(signalDict["value"])
-
-    def killDownloadThread(self):
-        self.ui.downloadAll.setEnabled(False)
-        self.downloadThread.terminate()
-
-    def onClickDownloadAll(self):
-        """ Download all the coursewares of all courses after catch the click. """
-        self.ui.progressBar.setRange(0, len(self.coursesList))
-        self.downloadThread = DownloadThread(
-            self.sess, self.coursesList, self.downloadPath, self.md5LogName)
-        self.downloadThread.updateUiSignal.connect(self.updateProgress)
-        self.downloadThread.updateSubBar.connect(self.updateSubProgress)
-        self.downloadThread.killSignal.connect(self.killDownloadThread)
-        self.downloadThread.start()
-
-    def updateCoursesList(self, signalDict):
-        self.sess = signalDict["session"]
-        course = signalDict["course"]
-        self.coursesList.append(course)
-        self.ui.coursesList.addItem(
-            "{:02d}\t{:s}".format(signalDict["idx"], course["name"]))
-        # self.getCoursesThread.terminate()
-
-    def killCourseThread(self):
-        self.ui.downloadAll.setEnabled(True)
-        self.getCoursesThread.terminate()
-
-    def onClickGetCourses(self):
-        """ Get all the course information. """
-        self.updateConfig()
-        self.getCoursesThread = GetCourseThread(self.sess)
-        self.getCoursesThread.getCourseSignal.connect(self.updateCoursesList)
-        self.getCoursesThread.finishSignal.connect(self.killCourseThread)
-        self.getCoursesThread.start()
-        self.ui.getCourses.setDefault(False)
-        self.ui.downloadAll.setDefault(True)
-
-    def updateLogInfoText(self, signalDict):
+    def updateCertCode(self, signalDict):
+        """ Update the certification image on the UI window. """
         self.ui.logInfo.setText(signalDict["text"])
-        self.sess = signalDict["session"]
-        self.ui.certCode.setReadOnly(True)
-        self.ui.userName.setReadOnly(True)
-        self.ui.passwd.setReadOnly(True)
-        self.ui.remPasswd.setDisabled(True)
-        self.ui.getCourses.setEnabled(True)
-        self.loginThread.terminate()
-    
-    def failToLogin(self, text):
-        self.ui.logInfo.setText(text)
-        self.loginThread.terminate()
+        if signalDict["scene"] != "":
+            self.ui.certImage.setScene(signalDict["scene"])
+
+    def killShowCertCode(self):
+        """ Kill show certification code image thread. """
+        self.certCodeThread.terminate()
 
     def onClickLogin(self):
         """ Click to login. """
@@ -186,6 +120,93 @@ class Ui(QDialog):
         self.loginThread.failSignal.connect(self.failToLogin)
         self.loginThread.start()
 
+    def updateLogInfoText(self, signalDict):
+        """ Update log information window by getting signal from thread. """
+        self.ui.logInfo.setText(signalDict["text"])
+        self.sess = signalDict["session"]
+        self.ui.certCode.setReadOnly(True)
+        self.ui.userName.setReadOnly(True)
+        self.ui.passwd.setReadOnly(True)
+        self.ui.remPasswd.setDisabled(True)
+        self.ui.getCourses.setEnabled(True)
+        self.loginThread.terminate()
+    
+    def failToLogin(self, text):
+        """ Work when login fails. """
+        self.ui.logInfo.setText(text)
+        self.loginThread.terminate()
+
+    def onClickChoosePath(self):
+        """ Choose the path to store coursewares. """
+        path = QFileDialog.getExistingDirectory(
+            self, "选择文件夹", ".")
+        if path == "":
+            self.ui.showPath.setText("请选择文件夹~！")
+            return
+        self.downloadPath = path
+        self.ui.showPath.setText(self.downloadPath)
+        self.ui.choosePath.setDefault(False)
+
+    def onClickGetCourses(self):
+        """ Get all the course information. """
+        self.updateConfig()
+        self.getCoursesThread = GetCourseThread(self.sess)
+        self.getCoursesThread.getCourseSignal.connect(self.updateCoursesList)
+        self.getCoursesThread.finishSignal.connect(self.killCourseThread)
+        self.getCoursesThread.error.connect(self.showError)
+        self.getCoursesThread.start()
+        self.ui.getCourses.setDefault(False)
+        self.ui.downloadAll.setDefault(True)
+
+    def updateCoursesList(self, signalDict):
+        """ Update course list by getting signal from thread. """
+        self.sess = signalDict["session"]
+        course = signalDict["course"]
+        self.coursesList.append(course)
+        self.ui.coursesList.addItem(
+            "{:02d}\t{:s}".format(signalDict["idx"], course["name"]))
+        # self.getCoursesThread.terminate()
+
+    def killCourseThread(self):
+        """ Kill get courese thread. """
+        self.ui.downloadAll.setEnabled(True)
+        self.getCoursesThread.terminate()
+
+    def showError(self, text):
+        """ Show error information on GUI. """
+        self.ui.logInfo.setText(text)
+
+    def onClickDownloadAll(self):
+        """ Download all the coursewares of all courses after catch the click. """
+        self.ui.progressBar.setRange(0, len(self.coursesList))
+        self.downloadThread = DownloadThread(
+            self.sess, self.coursesList, self.downloadPath, self.md5LogName)
+        self.downloadThread.updateUiSignal.connect(self.updateProgress)
+        self.downloadThread.updateSubBar.connect(self.updateSubProgress)
+        self.downloadThread.updateFileBar.connect(self.updateFileProgress)
+        self.downloadThread.killSignal.connect(self.killDownloadThread)
+        self.downloadThread.start()
+
+    def updateProgress(self, signalDict):
+        """ Update the progress of main processbar. """
+        self.ui.progressBar.setValue(signalDict["value"])
+        self.ui.progressInfo.setText(signalDict["text"])
+
+    def updateSubProgress(self, signalDict):
+        """ Update the progress of sub processbar. """
+        self.ui.subProgressBar.setRange(0, signalDict["max"])
+        self.ui.subProgressBar.setValue(signalDict["value"])
+
+    def updateFileProgress(self, signalDict):
+        """ Update the progress of file downloading processbar. """
+        self.ui.fileProcessBar.setRange(0, signalDict["max"])
+        self.ui.fileProcessBar.setValue(signalDict["value"])
+
+    def killDownloadThread(self):
+        """ Kill download files thread. """
+        self.ui.downloadAll.setEnabled(False)
+        self.downloadThread.terminate()
+
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
@@ -194,5 +215,6 @@ if __name__ == "__main__":
     file.open(QFile.ReadOnly | QFile.Text)
     stream = QTextStream(file)
     app.setStyleSheet(stream.readAll())
+    # start main UI window
     window = Ui()
     sys.exit(app.exec_())

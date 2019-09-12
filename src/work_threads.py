@@ -2,6 +2,7 @@ import os
 import re
 import json
 import hashlib
+from io import BytesIO
 from urllib import parse
 from bs4 import BeautifulSoup
 from PyQt5.QtGui import (QImage, QPixmap)
@@ -16,37 +17,38 @@ class CertCodeThread(QThread):
     updateUiSignal = pyqtSignal(dict)
     killSignal = pyqtSignal()
 
-    def __init__(self, session, name):
+    def __init__(self, session):
         super(CertCodeThread, self).__init__()
         self.sess = session
-        self.certImageName = name
 
-    def jpgToQImage(self):
+    def bytesToQImage(self, content):
         """ Read the downloaded certification image and convert it to QImage. """
-        certImg = Image.open(self.certImageName).convert("RGB")
+        certImg = Image.open(BytesIO(content)).convert("RGB")
         x, y = certImg.size
         data = certImg.tobytes("raw", "RGB")
         qim = QImage(data, x, y, QImage.Format_RGB888)
         return qim
+    
+    def createImageScene(self, content):
+        qim = self.bytesToQImage(content)
+        pix = QPixmap.fromImage(qim)
+        item = QGraphicsPixmapItem(pix)
+        scene = QGraphicsScene()
+        scene.addItem(item)
+        return scene
 
     def run(self):
         welcome = "欢迎使用下载课件脚本。\n^_^\n请先输入验证码登录。"
         try:
             self.sess.post("http://sep.ucas.ac.cn")
-            html = self.sess.get("http://sep.ucas.ac.cn/changePic")
+            res = self.sess.get("http://sep.ucas.ac.cn/changePic")
             self.updateUiSignal.emit({"text": welcome, "scene": ""})
         except:
             error = "网页超时 请重新获取验证码"
             self.updateUiSignal.emit({"text": error, "scene": ""})
             self.killSignal.emit()
             return
-        with open(self.certImageName, "wb") as f:
-            f.write(html.content)
-        qim = self.jpgToQImage()
-        pix = QPixmap.fromImage(qim)
-        item = QGraphicsPixmapItem(pix)
-        scene = QGraphicsScene()
-        scene.addItem(item)
+        scene = self.createImageScene(res.content)
         self.updateUiSignal.emit({"text": welcome, "scene": scene})
         self.killSignal.emit()
 
@@ -62,30 +64,34 @@ class LoginThread(QThread):
 
     def run(self):
         """ Post to login. """
-        res = self.sess.get("http://sep.ucas.ac.cn/slogin", params=self.login)
-        if res.status_code != 200:
-            self.failSignal.emit("[ERROR]: 登录失败，请核对用户名、密码以及验证码\n")
-            return
-        bsObj = BeautifulSoup(res.text, "html.parser")
-        nameTag = bsObj.find(
-            "li", {"class": "btnav-info", "title": "当前用户所在单位"})
-        if nameTag is None:
-            self.failSignal.emit("[ERROR]: 登录失败，请核对用户名密码\n")
-            return
-        name = nameTag.get_text()
-        match = re.compile(r"\s*(\S*)\s*(\S*)\s*").match(name)
-        if not match:
-            self.failSignal.emit("[ERROR]: 登录失败，请核对用户名密码\n")
-            return
-        institute = match.group(1)
-        name = match.group(2)
-        outStr = institute + '\n' + name + "\n登录成功！"
-        self.loginSignal.emit({"text": outStr, "session": self.sess})
+        try:
+            res = self.sess.get("http://sep.ucas.ac.cn/slogin", params=self.login, timeout=1)
+            if res.status_code != 200:
+                self.failSignal.emit("[ERROR]: 登录失败，请核对用户名、密码以及验证码\n")
+                return
+            bsObj = BeautifulSoup(res.text, "html.parser")
+            nameTag = bsObj.find(
+                "li", {"class": "btnav-info", "title": "当前用户所在单位"})
+            if nameTag is None:
+                self.failSignal.emit("[ERROR]: 登录失败，请核对用户名和密码\n")
+                return
+            name = nameTag.get_text()
+            match = re.compile(r"\s*(\S*)\s*(\S*)\s*").match(name)
+            if not match:
+                self.failSignal.emit("[ERROR]: 脚本运行错误\n")
+                return
+            institute = match.group(1)
+            name = match.group(2)
+            outStr = institute + '\n' + name + "\n登录成功！"
+            self.loginSignal.emit({"text": outStr, "session": self.sess})
+        except:
+            self.failSignal.emit("[ERROR]: 请检查网络连接是否正常。\n")
 
 
 class GetCourseThread(QThread):
     getCourseSignal = pyqtSignal(dict)
     finishSignal = pyqtSignal()
+    error = pyqtSignal(str)
 
     def __init__(self, session):
         super(GetCourseThread, self).__init__()
@@ -95,10 +101,9 @@ class GetCourseThread(QThread):
     def run(self):
         """ Get all the course information. """
         try:
-            res = self.sess.get("http://sep.ucas.ac.cn/portal/site/16/801")
+            res = self.sess.get("http://sep.ucas.ac.cn/portal/site/16/801", timeout=1)
         except:
-            # TODO: 
-            #      add time out information
+            self.error.emit("[ERROR]: 请检查网络连接！（可能网速较慢）")
             return
         bsObj = BeautifulSoup(res.text, "html.parser")
         courseWebsiteUrl = bsObj.find('noscript').meta.get("content")[6:]
@@ -122,15 +127,19 @@ class GetCourseThread(QThread):
 class DownloadThread(QThread):
     updateUiSignal = pyqtSignal(dict)
     updateSubBar = pyqtSignal(dict)
+    updateFileBar = pyqtSignal(dict)
     killSignal = pyqtSignal()
 
     def __init__(self, session, courseList, path, md5log):
         super(DownloadThread, self).__init__()
         self.sess = session
+        self.downloadChuckSize = 512
         self.coursesList = courseList
         self.downloadPath = path
         self.md5dict = {}
         self.md5log = md5log
+        self.changeLog = ""
+        self.changeLogFormat = "课件 {:s}/{:s} 有改动，请注意。\n"
         if os.path.exists(self.md5log):
             with open(self.md5log, "r") as f:
                 self.md5dict = json.load(f)
@@ -146,6 +155,7 @@ class DownloadThread(QThread):
                 os.removedirs(d)
 
     def run(self):
+        """ Run the main downloading task. """
         for i, course in enumerate(self.coursesList):
             self.downloadCourseware(i+1, course)
         self.updateUiSignal.emit(
@@ -167,14 +177,14 @@ class DownloadThread(QThread):
         """
         res = self.sess.get(courseUrl)
         bsObj = BeautifulSoup(res.text, "html.parser")
-        resourcePageUrl = bsObj.find(
-            'a', {"title": "资源 - 上传、下载课件，发布文档，网址等信息"})
-        if resourcePageUrl == None:
+        try:
+            resourcePageUrl = bsObj.find(
+            'a', {"title": "资源 - 上传、下载课件，发布文档，网址等信息"}).get("href")
+            res = self.sess.get(resourcePageUrl)
+            resourcePageObj = BeautifulSoup(res.text, 'html.parser')
+            return resourcePageObj
+        except:
             return None
-        resourcePageUrl = resourcePageUrl.get("href")
-        res = self.sess.get(resourcePageUrl)
-        resourcePageObj = BeautifulSoup(res.text, 'html.parser')
-        return resourcePageObj
 
     def getResourceInfos(self, resourcePageObj, parentDir=""):
         """ Get the information of coursewares.
@@ -187,9 +197,9 @@ class DownloadThread(QThread):
                 │            │
                 │     获取当前文件夹下的所有文件夹
                 │            │
-                │         1. 根据当前页面发POST请求
-                │         2. 获得子文件夹的页面
-                │         3. 调用自己
+                │        1. 根据当前页面发POST请求
+                │        2. 获得子文件夹的页面
+                │        3. 调用自己
                 │            │
                 └────────────┘
 
@@ -224,6 +234,7 @@ class DownloadThread(QThread):
         if len(resourceList) == 0:
             return 
         resourceList.pop(0)  # remove unuseful node
+        # TODO: Maybe need a try here
         resourceUrlList = [item.find('a').get("href")
                             for item in resourceList]
         resourceUrlList = [url for url in resourceUrlList if url != '#']
@@ -288,7 +299,7 @@ class DownloadThread(QThread):
         self.sakai_csrf_token = resourcePageObj.find(
             'input', {'name': 'sakai_csrf_token'}).get('value')
 
-    def md5sum(self, fileName):
+    def getMd5SumOfFile(self, fileName):
         def readChunks(fp):
             fp.seek(0)
             chunk = fp.read(8096)
@@ -316,17 +327,28 @@ class DownloadThread(QThread):
         """
         md5sum = 0
         if os.path.exists(fileName):
-            md5sum = self.md5dict[fileName]
+            try:
+                md5sum = self.md5dict[fileName]
+            except:
+                md5sum = self.getMd5SumOfFile(fileName)
         res = self.sess.get(resourceUrl)
+        fileSize = len(res.content)
+        self.updateFileBar.emit({"value": 0, "max": fileSize})
         UrlFileMd5 = hashlib.md5()
         for chunk in res.iter_content(chunk_size=512):
             UrlFileMd5.update(chunk)
         if md5sum == UrlFileMd5.hexdigest():
+            self.updateFileBar.emit({"value": fileSize, "max": fileSize})
             return "{:s} 未更新.".format(os.path.basename(fileName))
         self.md5dict[fileName] = UrlFileMd5.hexdigest()
+        process = 0
         with open(fileName, "wb") as f:
-            for chunk in res.iter_content(chunk_size=512):
+            for chunk in res.iter_content(chunk_size=self.downloadChuckSize):
+                process += self.downloadChuckSize
+                self.updateFileBar.emit({"value": process, "max": fileSize})
                 f.write(chunk)
+        self.changeLog += self.changeLogFormat.format(self.curCourseName, fileName)
+        self.updateFileBar.emit({"value": fileSize, "max": fileSize})
         return "{:s} 已下载完毕。".format(os.path.basename(fileName))
 
     def downloadCourseware(self, idx, courseInfo):
@@ -343,8 +365,9 @@ class DownloadThread(QThread):
             None
         """
         # Get Course directory
+        self.curCourseName = courseInfo["name"]
         self.resourceInfos = []
-        courseDir = os.path.join(self.downloadPath, courseInfo["name"])
+        courseDir = os.path.join(self.downloadPath, self.curCourseName)
         # redirect to the resource page of the course website
         resourcePageObj = self.reDirectToResourcePage(courseInfo["url"])
         if resourcePageObj == None:
@@ -355,7 +378,7 @@ class DownloadThread(QThread):
         if resourceNum > 0:
             if not os.path.exists(courseDir):
                 os.makedirs(courseDir)
-            outStr = "正在下载{:s}的课件...\n".format(courseInfo["name"])
+            outStr = "正在下载{:s}的课件...\n".format(self.curCourseName)
             self.updateUiSignal.emit({"value": idx, "text": outStr})
             self.updateSubBar.emit({"value": 0, "max": resourceNum})
         for i, resourceInfo in enumerate(self.resourceInfos):
