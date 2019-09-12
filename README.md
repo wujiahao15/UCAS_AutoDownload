@@ -15,6 +15,10 @@
 2. 打开该项目的文件夹，在地址栏输入`CMD`后，在打开的`CMD`中输入：`scripts\Windows_Install.bat`
 3. 接着在`CMD`中输入`scripts\Windows_Setup.bat`即可运行。
 
+#### Roadmap 
+
+[ ] windows下编译成`exe`可执行文件，并通过多台PC设备的测试。
+
 ### MacOS (Use Python script)
 
 打开Mac的终端，cd到`UCAS_AutoDownload`目录下，在终端中执行以下命令。
