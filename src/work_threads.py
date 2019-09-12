@@ -94,7 +94,12 @@ class GetCourseThread(QThread):
 
     def run(self):
         """ Get all the course information. """
-        res = self.sess.get("http://sep.ucas.ac.cn/portal/site/16/801")
+        try:
+            res = self.sess.get("http://sep.ucas.ac.cn/portal/site/16/801")
+        except:
+            # TODO: 
+            #      add time out information
+            return
         bsObj = BeautifulSoup(res.text, "html.parser")
         courseWebsiteUrl = bsObj.find('noscript').meta.get("content")[6:]
         res = self.sess.get(courseWebsiteUrl)
@@ -111,7 +116,6 @@ class GetCourseThread(QThread):
             course["url"] = courseInfo.find('a').get('href')
             self.getCourseSignal.emit(
                 {"course": course, "session": self.sess, "idx": idx})
-            # self.coursesList.append(course)
         self.finishSignal.emit()
 
 
@@ -164,7 +168,10 @@ class DownloadThread(QThread):
         res = self.sess.get(courseUrl)
         bsObj = BeautifulSoup(res.text, "html.parser")
         resourcePageUrl = bsObj.find(
-            'a', {"title": "资源 - 上传、下载课件，发布文档，网址等信息"}).get("href")
+            'a', {"title": "资源 - 上传、下载课件，发布文档，网址等信息"})
+        if resourcePageUrl == None:
+            return None
+        resourcePageUrl = resourcePageUrl.get("href")
         res = self.sess.get(resourcePageUrl)
         resourcePageObj = BeautifulSoup(res.text, 'html.parser')
         return resourcePageObj
@@ -176,7 +183,7 @@ class DownloadThread(QThread):
 
         The process of this function is as follows:
 
-                ┌──── 获取当前文件夹下的所有文件
+                ┌──── 获取当前文件夹下的所有文件的信息（文件名+文件下载链接）
                 │            │
                 │     获取当前文件夹下的所有文件夹
                 │            │
@@ -214,18 +221,19 @@ class DownloadThread(QThread):
         """
         resourceList = resourcePageObj.find_all(
             "td", {"class": "specialLink title"})
-        if len(resourceList) > 0:
-            resourceList.pop(0)  # remove unuseful node
-            resourceUrlList = [item.find('a').get("href")
-                               for item in resourceList]
-            resourceUrlList = [url for url in resourceUrlList if url != '#']
-            for resourceUrl in resourceUrlList:
-                resourceInfo = {}
-                resourceInfo["subDir"] = parentDir
-                resourceInfo["url"] = resourceUrl
-                resourceInfo["fileName"] = parse.unquote(os.path.basename(
-                    resourceUrl))
-                self.resourceInfos.append(resourceInfo)
+        if len(resourceList) == 0:
+            return 
+        resourceList.pop(0)  # remove unuseful node
+        resourceUrlList = [item.find('a').get("href")
+                            for item in resourceList]
+        resourceUrlList = [url for url in resourceUrlList if url != '#']
+        for resourceUrl in resourceUrlList:
+            resourceInfo = {}
+            resourceInfo["subDir"] = parentDir
+            resourceInfo["url"] = resourceUrl
+            resourceInfo["fileName"] = parse.unquote(os.path.basename(
+                resourceUrl))
+            self.resourceInfos.append(resourceInfo)
 
     def getSubDirPageObjs(self, resourcePageObj, parentDir):
         """ Get the information of files in the subfolder web page.
@@ -241,27 +249,28 @@ class DownloadThread(QThread):
         subDirResourceList = resourcePageObj.find_all(
             'td', {'class': 'attach', 'headers': 'checkboxes'})
         # print(subDirResourceList)
-        if len(subDirResourceList) > 0:
-            subDirResourceList.pop(0)
-            for subDirResourceObj in subDirResourceList:
-                collectionId = subDirResourceObj.input.get('value')
-                if collectionId[-1] != '/':
-                    continue
-                # fileBaseName = os.path.basename(collectionId)
-                folderName = os.path.join(
-                    parentDir, collectionId.split("/")[-2])
-                # print("发现子文件夹 {:s}".format(folderName))
-                formData = {
-                    'source': '0', 'collectionId': collectionId,
-                    'navRoot': '', 'criteria': 'title',
-                    'sakai_action': 'doNavigate', 'rt_action': '', 'selectedItemId': '', 'itemHidden': 'false',
-                    'itemCanRevise': 'false',
-                    'sakai_csrf_token': self.sakai_csrf_token
-                }
-                res = self.sess.post(
-                    self.functionUrl, data=formData, allow_redirects=True)
-                subPageObj = BeautifulSoup(res.text, "html.parser")
-                subDirPageObjs.append((subPageObj, folderName))
+        if len(subDirResourceList) == 0:
+            return 
+        subDirResourceList.pop(0)
+        for subDirResourceObj in subDirResourceList:
+            collectionId = subDirResourceObj.input.get('value')
+            if collectionId[-1] != '/':
+                continue
+            # fileBaseName = os.path.basename(collectionId)
+            folderName = os.path.join(
+                parentDir, collectionId.split("/")[-2])
+            # print("发现子文件夹 {:s}".format(folderName))
+            formData = {
+                'source': '0', 'collectionId': collectionId,
+                'navRoot': '', 'criteria': 'title',
+                'sakai_action': 'doNavigate', 'rt_action': '', 'selectedItemId': '', 'itemHidden': 'false',
+                'itemCanRevise': 'false',
+                'sakai_csrf_token': self.sakai_csrf_token
+            }
+            res = self.sess.post(
+                self.functionUrl, data=formData, allow_redirects=True)
+            subPageObj = BeautifulSoup(res.text, "html.parser")
+            subDirPageObjs.append((subPageObj, folderName))
         return subDirPageObjs
 
     def getUnfoldPostPattern(self, resourcePageObj):
@@ -338,6 +347,8 @@ class DownloadThread(QThread):
         courseDir = os.path.join(self.downloadPath, courseInfo["name"])
         # redirect to the resource page of the course website
         resourcePageObj = self.reDirectToResourcePage(courseInfo["url"])
+        if resourcePageObj == None:
+            return
         self.getUnfoldPostPattern(resourcePageObj)
         self.getResourceInfos(resourcePageObj)
         resourceNum = len(self.resourceInfos)
