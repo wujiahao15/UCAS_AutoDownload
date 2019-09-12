@@ -23,7 +23,7 @@ class Ui(QDialog):
         super(Ui, self).__init__()
         self.downloadPath = os.path.abspath('.')
         self.configParser = configparser.ConfigParser()
-        self.configPath = "config"
+        self.configPath = ".config"
         self.md5LogName = os.path.join(self.configPath, "md5log.json")
         if not os.path.exists(self.configPath):
             os.makedirs(self.configPath)
