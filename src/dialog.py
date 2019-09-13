@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Form implementation generated from reading ui file 'src\dialog.ui'
+# Form implementation generated from reading ui file 'dialog.ui'
 #
 # Created by: PyQt5 UI code generator 5.13.0
 #
@@ -98,7 +98,7 @@ class Ui_Dialog(object):
         self.loginButton.setGeometry(QtCore.QRect(130, 150, 221, 31))
         self.loginButton.setObjectName("loginButton")
         self.progressBar = QtWidgets.QProgressBar(Dialog)
-        self.progressBar.setGeometry(QtCore.QRect(130, 520, 481, 23))
+        self.progressBar.setGeometry(QtCore.QRect(130, 520, 461, 23))
         self.progressBar.setAutoFillBackground(False)
         self.progressBar.setProperty("value", 24)
         self.progressBar.setObjectName("progressBar")
@@ -109,7 +109,7 @@ class Ui_Dialog(object):
         self.label_3.setGeometry(QtCore.QRect(20, 515, 101, 31))
         self.label_3.setObjectName("label_3")
         self.subProgressBar = QtWidgets.QProgressBar(Dialog)
-        self.subProgressBar.setGeometry(QtCore.QRect(130, 560, 481, 23))
+        self.subProgressBar.setGeometry(QtCore.QRect(130, 560, 461, 23))
         self.subProgressBar.setProperty("value", 24)
         self.subProgressBar.setObjectName("subProgressBar")
         self.label_4 = QtWidgets.QLabel(Dialog)
@@ -117,7 +117,7 @@ class Ui_Dialog(object):
         self.label_4.setAlignment(QtCore.Qt.AlignCenter)
         self.label_4.setObjectName("label_4")
         self.fileProcessBar = QtWidgets.QProgressBar(Dialog)
-        self.fileProcessBar.setGeometry(QtCore.QRect(130, 600, 481, 23))
+        self.fileProcessBar.setGeometry(QtCore.QRect(130, 600, 461, 23))
         self.fileProcessBar.setProperty("value", 24)
         self.fileProcessBar.setObjectName("fileProcessBar")
         self.label_5 = QtWidgets.QLabel(Dialog)

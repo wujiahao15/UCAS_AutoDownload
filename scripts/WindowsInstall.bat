@@ -1,3 +1,3 @@
 pip install virtualenv
 virtualenv --no-site-packages venv
-venv\Scripts\activate
+venv\Scripts\pip.exe install -r ..\win_requirements.txt
