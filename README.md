@@ -11,9 +11,9 @@
 
 ### Windows (Build From Source)
 
-1. 确保`Python`的路径在系统环境变量中。
-2. 打开该项目的文件夹，在地址栏输入`CMD`后，在打开的`CMD`中输入：`scripts\Windows_Install.bat`
-3. 接着在`CMD`中输入`scripts\Windows_Setup.bat`即可运行。
+1. 首先，**确保**`Python`的路径在系统**环境变量**中。
+2. 接着，双击`scripts`文件夹中的`WindowsInstall.bat`进行Python环境的预安装。
+3. 最后，双击`scripts`文件夹中的`WindowsRun.bat`启动程序。
 
 #### Roadmap 
 
@@ -25,7 +25,7 @@
 ``` bash
 # 确保当前目录为 UCAS_AutoDownload
 ## 先安装需要的环境
-./scripts/MacOS_Install.sh
+./scripts/MacOsInstall.sh
 ## 运行↓
-./scripts/MacOS_Run.sh
+./scripts/MacOsRun.sh
 ```
