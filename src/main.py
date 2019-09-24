@@ -222,6 +222,8 @@ class SecondUi(QDialog):
     def showResult(self, changeLogs):
         for log in changeLogs:
             self.childUi.listWidget.addItem(log)
+        if len(changeLogs) == 0:
+            self.childUi.listWidget.addItem("本次没有更新任何课件。")
         self.show()
 
 if __name__ == "__main__":
