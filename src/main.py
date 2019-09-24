@@ -8,17 +8,20 @@ import configparser
 
 from urllib import parse
 from bs4 import BeautifulSoup
-from PyQt5.QtCore import QFile, QTextStream
+from PyQt5.QtCore import (QFile, QTextStream, pyqtSignal)
 from PyQt5.QtGui import (QImage, QPixmap)
-from PyQt5.QtWidgets import (QLineEdit, QDialog, QApplication, QFileDialog)
+from PyQt5.QtWidgets import (QMainWindow, QDialog,
+                             QLineEdit, QApplication, QFileDialog)
 
 import breeze_resources
 from dialog import Ui_Dialog
+from message import Ui_Form
 from work_threads import (LoginThread, DownloadThread,
                           GetCourseThread, CertCodeThread)
 
 
-class Ui(QDialog):
+class Ui(QMainWindow):
+    showUpdate = pyqtSignal(list)
     def __init__(self):
         super(Ui, self).__init__()
         self.downloadPath = os.path.abspath('.')
@@ -27,7 +30,7 @@ class Ui(QDialog):
         self.md5LogName = os.path.join(self.configPath, "md5log.json")
         if not os.path.exists(self.configPath):
             os.makedirs(self.configPath)
-        self.confName = os.path.join(self.configPath,"cache.cfg")
+        self.confName = os.path.join(self.configPath, "cache.cfg")
         self.login = {}
         self.coursesList = []
         self.resourceInfos = []
@@ -130,7 +133,7 @@ class Ui(QDialog):
         self.ui.remPasswd.setDisabled(True)
         self.ui.getCourses.setEnabled(True)
         self.loginThread.terminate()
-    
+
     def failToLogin(self, text):
         """ Work when login fails. """
         self.ui.logInfo.setText(text)
@@ -202,11 +205,24 @@ class Ui(QDialog):
         self.ui.fileProcessBar.setRange(0, signalDict["max"])
         self.ui.fileProcessBar.setValue(signalDict["value"])
 
-    def killDownloadThread(self):
+    def killDownloadThread(self, changeLogs):
         """ Kill download files thread. """
         self.ui.downloadAll.setEnabled(False)
+        self.showUpdate.emit(changeLogs)
         self.downloadThread.terminate()
 
+
+class SecondUi(QDialog):
+    def __init__(self):
+        super(SecondUi, self).__init__()
+        self.childUi = Ui_Form()
+        self.childUi.setupUi(self)
+        self.setWindowTitle("Show Update Information")
+
+    def showResult(self, changeLogs):
+        for log in changeLogs:
+            self.childUi.listWidget.addItem(log)
+        self.show()
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
@@ -215,6 +231,8 @@ if __name__ == "__main__":
     file.open(QFile.ReadOnly | QFile.Text)
     stream = QTextStream(file)
     app.setStyleSheet(stream.readAll())
-    # start main UI window
+    # Set up UI windows
     window = Ui()
+    secWindow = SecondUi()
+    window.showUpdate.connect(secWindow.showResult)
     sys.exit(app.exec_())

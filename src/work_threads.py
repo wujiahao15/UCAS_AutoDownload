@@ -28,7 +28,7 @@ class CertCodeThread(QThread):
         data = certImg.tobytes("raw", "RGB")
         qim = QImage(data, x, y, QImage.Format_RGB888)
         return qim
-    
+
     def createImageScene(self, content):
         qim = self.bytesToQImage(content)
         pix = QPixmap.fromImage(qim)
@@ -65,7 +65,8 @@ class LoginThread(QThread):
     def run(self):
         """ Post to login. """
         try:
-            res = self.sess.get("http://sep.ucas.ac.cn/slogin", params=self.login, timeout=1)
+            res = self.sess.get("http://sep.ucas.ac.cn/slogin",
+                                params=self.login, timeout=1)
             if res.status_code != 200:
                 self.failSignal.emit("[ERROR]: 登录失败，请核对用户名、密码以及验证码\n")
                 return
@@ -101,7 +102,8 @@ class GetCourseThread(QThread):
     def run(self):
         """ Get all the course information. """
         try:
-            res = self.sess.get("http://sep.ucas.ac.cn/portal/site/16/801", timeout=1)
+            res = self.sess.get(
+                "http://sep.ucas.ac.cn/portal/site/16/801", timeout=1)
         except:
             self.error.emit("[ERROR]: 请检查网络连接！（可能网速较慢）")
             return
@@ -128,7 +130,7 @@ class DownloadThread(QThread):
     updateUiSignal = pyqtSignal(dict)
     updateSubBar = pyqtSignal(dict)
     updateFileBar = pyqtSignal(dict)
-    killSignal = pyqtSignal()
+    killSignal = pyqtSignal(list)
 
     def __init__(self, session, courseList, path, md5log):
         super(DownloadThread, self).__init__()
@@ -138,8 +140,10 @@ class DownloadThread(QThread):
         self.downloadPath = path
         self.md5dict = {}
         self.md5log = md5log
-        self.changeLog = ""
+        self.changeLogIndex = 0
+        self.changeLog = []
         self.changeLogFormat = "课件 {:s}/{:s} 有改动，请注意。\n"
+        self.changeLogItem = "{:02d}  {:s}"
         if os.path.exists(self.md5log):
             with open(self.md5log, "r") as f:
                 self.md5dict = json.load(f)
@@ -161,12 +165,12 @@ class DownloadThread(QThread):
         self.updateUiSignal.emit(
             {"value": len(self.coursesList), "text": "下载并更新完毕！"})
         # self.deleteEmptyDirs()
-        self.killSignal.emit()
+        self.killSignal.emit(self.changeLog)
 
     def reDirectToResourcePage(self, courseUrl):
         """ Redirect page to resource page.
 
-        Redirect the pagefrom course website main page to its resource page,
+        Redirect the page from course website main page to its resource page,
         in order to get coursewares.
 
         Args:
@@ -179,7 +183,7 @@ class DownloadThread(QThread):
         bsObj = BeautifulSoup(res.text, "html.parser")
         try:
             resourcePageUrl = bsObj.find(
-            'a', {"title": "资源 - 上传、下载课件，发布文档，网址等信息"}).get("href")
+                'a', {"title": "资源 - 上传、下载课件，发布文档，网址等信息"}).get("href")
             res = self.sess.get(resourcePageUrl)
             resourcePageObj = BeautifulSoup(res.text, 'html.parser')
             return resourcePageObj
@@ -232,11 +236,11 @@ class DownloadThread(QThread):
         resourceList = resourcePageObj.find_all(
             "td", {"class": "specialLink title"})
         if len(resourceList) == 0:
-            return 
+            return
         resourceList.pop(0)  # remove unuseful node
         # TODO: Maybe need a try here
         resourceUrlList = [item.find('a').get("href")
-                            for item in resourceList]
+                           for item in resourceList]
         resourceUrlList = [url for url in resourceUrlList if url != '#']
         for resourceUrl in resourceUrlList:
             resourceInfo = {}
@@ -261,7 +265,7 @@ class DownloadThread(QThread):
             'td', {'class': 'attach', 'headers': 'checkboxes'})
         # print(subDirResourceList)
         if len(subDirResourceList) == 0:
-            return 
+            return
         subDirResourceList.pop(0)
         for subDirResourceObj in subDirResourceList:
             collectionId = subDirResourceObj.input.get('value')
@@ -347,7 +351,10 @@ class DownloadThread(QThread):
                 process += self.downloadChuckSize
                 self.updateFileBar.emit({"value": process, "max": fileSize})
                 f.write(chunk)
-        self.changeLog += self.changeLogFormat.format(self.curCourseName, fileName)
+        self.changeLogIndex += 1
+        outName = os.path.join(fileName.split(os.sep)[-2], os.path.basename(fileName))
+        self.changeLog.append(self.changeLogItem.format(
+            self.changeLogIndex, outName))
         self.updateFileBar.emit({"value": fileSize, "max": fileSize})
         return "{:s} 已下载完毕。".format(os.path.basename(fileName))
 
