@@ -9,15 +9,21 @@
 
 ## Usage
 
-### Windows (Build From Source)
+### Windows
+
+#### 1. Build From Source (Not recommended)
 
 1. 首先，**确保**`Python`的路径在系统**环境变量**中。
 2. 接着，双击`scripts`文件夹中的`WindowsInstall.bat`进行Python环境的预安装。
 3. 最后，双击`scripts`文件夹中的`WindowsRun.bat`启动程序。
 
+#### 2. Use App Installer
+
+1. 下载Release中的安装包，安装使用。
+
 #### Roadmap 
 
-* [ ] windows下编译成`exe`可执行文件，并通过多台PC设备的测试。
+* [x] windows下编译成`exe`可执行文件，并通过多台PC设备的测试。
 
 ### MacOS (Use Python script)
 

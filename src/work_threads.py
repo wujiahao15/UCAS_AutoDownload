@@ -400,3 +400,35 @@ class DownloadThread(QThread):
             self.updateUiSignal.emit({"value": idx, "text": outStr})
         with open(self.md5log, "w") as f:
             json.dump(self.md5dict, f)
+
+class CheckHomeworkThread(QThread):
+    def __init__(self, session, courseList):
+        super(CheckHomeworkThread, self).__init__()
+        self.sess = session
+        self.courseList = courseList
+
+    def run(self):
+        pass
+
+    def redirectToHomeworkPage(self, courseUrl):
+        """ Redirect page to resource page.
+
+        Redirect the page from course website main page to its resource page,
+        in order to get coursewares.
+
+        Args:
+            courseUrl: String, the url of course main page
+
+        Returns:
+            resourcePageObj: BeatifulSoup Object, parse the resource page
+        """
+        res = self.sess.get(courseUrl)
+        bsObj = BeautifulSoup(res.text, "html.parser")
+        try:
+            resourcePageUrl = bsObj.find(
+                'a', {"title": "作业 - 在线发布、提交和批改作业"}).get("href")
+            res = self.sess.get(resourcePageUrl)
+            resourcePageObj = BeautifulSoup(res.text, 'html.parser')
+            return resourcePageObj
+        except:
+            return None
