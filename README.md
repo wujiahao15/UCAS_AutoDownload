@@ -10,7 +10,7 @@
 
 ## 使用说明
 
-### 1. 使用安装包安装软件（**推荐**）
+### 1. 使用安装包安装软件（推荐）
 
 #### `Windows`系统
 
@@ -20,7 +20,7 @@
 
 * 请下载[Release](https://github.com/flamywhale/UCAS_AutoDownload/releases)中的`macOS_Installer.dmg`安装包，进行安装使用，点击[这里](https://github.com/flamywhale/UCAS_AutoDownload/releases/download/version0.1/macOS_Installer.dmg)下载。
 
-### 2. 直接运行Python代码 (**不推荐**)
+### 2. 直接运行Python代码 (不推荐)
 
 #### `Windows`系统
 
