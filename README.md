@@ -19,7 +19,7 @@
 
 #### 2. Use App Installer
 
-1. 下载Release中的安装包，安装使用。
+1. 下载[Release](https://github.com/flamywhale/UCAS_AutoDownload/releases)中的安装包，安装使用，点击[这里](https://github.com/flamywhale/UCAS_AutoDownload/releases/download/version0.1/Windows_Installer.exe)下载。
 
 #### Roadmap 
 
