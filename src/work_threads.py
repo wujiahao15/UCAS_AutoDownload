@@ -38,7 +38,7 @@ class CertCodeThread(QThread):
         return scene
 
     def run(self):
-        welcome = "欢迎使用下载课件脚本。\n^_^\n请先输入验证码登录。"
+        welcome = "欢迎使用下载课件脚本。\n^_^\n请使用登录SEP的账号（邮箱）"
         try:
             self.sess.post("http://sep.ucas.ac.cn")
             res = self.sess.get("http://sep.ucas.ac.cn/changePic")
