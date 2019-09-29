@@ -1,12 +1,12 @@
 # UCAS AutoDownloader
 
-批量下载及更新课件的GUI程序。
+## 简介
 
-## 声明
-
-1. 该脚本基于[vastskymiaow](https://github.com/vastskymiaow)的项目[UCAS-Course_Resource-Download](https://github.com/vastskymiaow/UCAS-Course_Resource-Download)，在其基础上添加了验证码的输入以及相应的图形化界面，并重构了部分代码。
-2. UI部分的样式采用了项目[BreezeStyleSheets](https://github.com/Alexhuszagh/BreezeStyleSheets)。
-3. 使用[fbs](https://build-system.fman.io/)进行应用的打包。
+1. 该软件仅限于用来批量下载及更新UCAS的课件。
+2. 该软件基于[vastskymiaow](https://github.com/vastskymiaow)的项目[UCAS-Course_Resource-Download](https://github.com/vastskymiaow/UCAS-Course_Resource-Download)，并在其基础上添加了验证码的输入以及相应的图形化界面，以及重构了部分代码。
+3. UI部分的样式采用了项目[BreezeStyleSheets](https://github.com/Alexhuszagh/BreezeStyleSheets)。
+4. 该项目使用[fbs](https://build-system.fman.io/)进行应用的打包。
+5. 如果在使用中出现了问题，请在[issues](https://github.com/flamywhale/UCAS_AutoDownload/issues)中提出，我会进行更新。
 
 ## 使用说明
 
