@@ -1,6 +1,6 @@
 # UCAS AutoDownloader
 
-批量下载及更新课件的GUI脚本。
+批量下载及更新课件的GUI程序。
 
 ## 声明
 
