@@ -5,7 +5,7 @@ chardet==3.0.4
 fbs==0.8.4
 idna==2.8
 macholib==1.11
-Pillow==6.1.0
+Pillow==6.2.0
 PyInstaller==3.5
 PyQt5==5.9.2
 requests==2.22.0
