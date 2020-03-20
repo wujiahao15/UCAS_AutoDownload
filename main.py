@@ -14,20 +14,17 @@ from signal import signal, SIGINT
 from sys import exit
 from time import (sleep, ctime)
 
-from manager import Manager
-
+from src.manager import Manager
+from src.configs import DATABASE_NAME
 
 async def main():
-    while True:
-        try:
-            async with ClientSession() as session:
-                manager = Manager(session)
-                await manager.run()
-                print(f'[{ctime()}] Waiting for next execution...')
-                sleep(3600)
-        except Exception as e:
-            print('[Exception]:', type(e), e)
-            return
+    try:
+        async with ClientSession() as session:
+            manager = Manager(session, DATABASE_NAME)
+            await manager.run()
+    except Exception as e:
+        print('[Exception]:', type(e), e)
+        return
 
 
 def handler(signal_received, frame):
