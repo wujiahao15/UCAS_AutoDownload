@@ -17,10 +17,10 @@ SQL_CMD = {
         "update": ""
     },
     "user": {
-        "create": "CREATE TABLE USERS (USERNAME TEXT PRIMARY KEY NOT NULL, PASSWORD TEXT, STOREPATH TEXT, MODE TEXT);",
+        "create": "CREATE TABLE USERS (USERNAME TEXT PRIMARY KEY NOT NULL, PASSWORD TEXT, STOREPATH TEXT, ISFROMUCAS TEXT, STUDENTID TEXT, MODE TEXT);",
         "lookup": "SELECT * from USERS WHERE MODE = 'default'",
-        "insert": "INSERT INTO USERS (USERNAME, PASSWORD, STOREPATH, MODE) VALUES (?, ?, ?, ?)",
-        "update": "UPDATE USERS set USERNAME = ?, PASSWORD = ?, STOREPATH = ? where MODE = 'default'"
+        "insert": "INSERT INTO USERS (USERNAME, PASSWORD, STOREPATH, ISFROMUCAS, STUDENTID, MODE) VALUES (?, ?, ?, ?, ?, ?)",
+        "update": "UPDATE USERS set USERNAME = ?, PASSWORD = ?, STOREPATH = ?, ISFROMUCAS = ?, STUDENTID = ? where MODE = 'default'"
     },
     "courseware": {
         "create": "CREATE TABLE FILES (FILENAME TEXT PRIMARY KEY NOT NULL, URL TEXT NOT NULL, UPDATE_TIME TEXT NOT NULL);",

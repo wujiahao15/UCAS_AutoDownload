@@ -38,6 +38,8 @@ class Manager(object):
         self.username = ''
         self.password = ''
         self.downloadPath = ''
+        self.isFromUCAS = ''
+        self.studentID = ''
         try:
             self.checkDatebase()
         except Exception as e:
@@ -58,12 +60,25 @@ class Manager(object):
         while True:
             c = self.db.cursor()
             result = c.execute(SQL_CMD["user"]["lookup"]).fetchone()
-            if result == None:
-                insertValues = self.getUserInfo()
-                c.execute(SQL_CMD["user"]["insert"], insertValues)
-                self.db.commit()
+            useCache = input("Do you want to use cache(Y/N)?: ")
+            if useCache.upper() == "Y":
+                if result != None:
+                    self.username, self.password, self.downloadPath, self.isFromUCAS, self.studentID, _ = result
+                    print('Cached info loaded.')
+                else:
+                    insertValues = self.getUserInfo()
+                    c.execute(SQL_CMD["user"]["insert"], insertValues)
+                    self.db.commit()
+                    print('Info cached.')
             else:
-                self.username, self.password, self.downloadPath, _ = result
+                if result != None:
+                    self.updateUserInfo()
+                else:
+                    print('No cached info detected, please input')
+                    insertValues = self.getUserInfo()
+                    c.execute(SQL_CMD["user"]["insert"], insertValues)
+                    self.db.commit()
+                    print('Info cached.')
             self.loginInfo = {
                 'username': self.username,
                 'password': self.password,
@@ -71,16 +86,18 @@ class Manager(object):
             }
             success = await self.tryToLogin()
             if not success:
+                print("Failed to login.\nPlease enter your username and password again, and make sure it is right!")
                 self.updateUserInfo()
             else:
                 break
 
     def updateUserInfo(self):
-        print("Failed to login.\nPlease enter your username and password again, and make sure it is right!")
         values = self.getUserInfo()
         c = self.db.cursor()
         c.execute(SQL_CMD["user"]["update"], values[:-1])
         self.db.commit()
+        print('Info updated.')
+
 
     async def tryToLogin(self):
         async with self.sess.post(
@@ -92,7 +109,10 @@ class Manager(object):
         self.username = input('username: ')
         self.password = getpass('password: ')
         self.downloadPath = input('Where to save coursewares: ')
-        return [self.username, self.password, self.downloadPath, 'default']
+        self.isFromUCAS = input('Whether you are graduated from UCAS(for UCAS undergraduates) Y/N: ')
+        if self.isFromUCAS.upper() == 'Y':
+            self.studentID = input('Your current student ID: ')
+        return [self.username, self.password, self.downloadPath, self.isFromUCAS, self.studentID, 'default']
 
     def printLoginInfo(self, soup):
         nameTag = soup.find(
@@ -132,23 +152,32 @@ class Manager(object):
             bsObj = BeautifulSoup(text, "html.parser")
             courseWebsiteUrl = bsObj.find(
                 'noscript').meta.get("content")[6:]
-            # print(courseWebsiteUrl)
+            # print("courseWebsiteUrl=",courseWebsiteUrl)
             text = await fetch(self.sess, courseWebsiteUrl)
+            if self.isFromUCAS.upper() == 'Y':
+                param = {'anotherUser' : self.studentID}
+                # Must use https here
+                text = await fetch (self.sess, "https://course.ucas.ac.cn/portal", params=param)
             bsObj = BeautifulSoup(text, "html.parser")
             allCoursesUrl = bsObj.find(
-                'a', {'class': "Mrphs-toolsNav__menuitem--link", 'title': "我的课程 - 查看或加入站点"}).get("href")
-            # print(allCoursesUrl)
+                'a', {'class': "Mrphs-toolsNav__menuitem--link", 'title' :"我的课程 - 查看或加入站点"}).get("href")
+            # print("allCoursesUrl=",allCoursesUrl)
+            if self.isFromUCAS.upper() == 'Y':
+                allCoursesUrl = allCoursesUrl.replace("sep", "course")
+            # print("allCoursesUrl=",allCoursesUrl)
             text = await fetch(self.sess, allCoursesUrl)
             bsObj = BeautifulSoup(text, "html.parser")
             allCoursesInfo = bsObj.find(
                 'ul', {'class': "otherSitesCategorList favoriteSiteList"}).find_all('div', {'class': "fav-title"})
+            # print("allCoursesInfo" , allCoursesInfo)
             for courseInfo in allCoursesInfo:
                 course = {}
                 course["name"] = courseInfo.find('a').get('title')
                 course["url"] = courseInfo.find('a').get('href')
                 print(f'[{ctime()}] Find course {course["name"]}')
                 self.coursesList.append(course)
-        except:
+        except Exception as e:
+            print("exception is",e)
             print("[ERROR]: 请检查网络连接！（可能网速较慢）")
             exit(0)
 
