@@ -16,8 +16,8 @@
 ## Dependency
 
 * 本项目的下载视频部分依赖`youtube-dl`和`ffmpeg`，请自行下载依赖。
-* [youtube-dl](https://ytdl-org.github.io/youtube-dl/index.html)
-* [ffmpeg](https://www.ffmpeg.org/download.html)
+    * [youtube-dl](https://ytdl-org.github.io/youtube-dl/index.html)
+    * [ffmpeg](https://www.ffmpeg.org/download.html)
 
 ## TODO
 

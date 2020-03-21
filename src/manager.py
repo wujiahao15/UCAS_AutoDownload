@@ -21,7 +21,7 @@ from sys import exit
 from time import ctime
 from urllib import parse
 
-from src.configs import (HTTP_HDRS, SQL_CMD, TARGET_PAGE_TAG)
+from src.configs import (HTTP_HDRS, SQL_CMD, TARGET_PAGE_TAG, LOGIN_URL)
 from src.downloader import (CoursewareDownloader, VideoDownloader)
 
 
@@ -32,6 +32,7 @@ async def fetch(session, url, timeout=10, params=None):
 
 class Manager(object):
     def __init__(self, session, databasePath):
+        self._managers = {}
         self.databasePath = databasePath
         self.sess = session
         self.coursesList = []
@@ -51,7 +52,8 @@ class Manager(object):
             self.db = sqlite3.connect(self.databasePath)
             c = self.db.cursor()
             # list(map(lambda table: c.execute(table['create']), SQL_CMD))
-            dict(map(lambda item: (item[0], c.execute(item[1]['create'])), SQL_CMD.items()))
+            dict(map(lambda item: (item[0], c.execute(
+                item[1]['create'])), SQL_CMD.items()))
             self.db.commit()
         else:
             self.db = sqlite3.connect(self.databasePath)
@@ -86,7 +88,8 @@ class Manager(object):
             }
             success = await self.tryToLogin()
             if not success:
-                print("Failed to login.\nPlease enter your username and password again, and make sure it is right!")
+                print(
+                    "Failed to login.\nPlease enter your username and password again, and make sure it is right!")
                 self.updateUserInfo()
             else:
                 break
@@ -98,10 +101,9 @@ class Manager(object):
         self.db.commit()
         print('Info updated.')
 
-
     async def tryToLogin(self):
         async with self.sess.post(
-                'http://onestop.ucas.ac.cn/Ajax/Login/0', headers=HTTP_HDRS['post'], data=self.loginInfo) as res:
+                LOGIN_URL, headers=HTTP_HDRS['post'], data=self.loginInfo) as res:
             resJson = json.loads(await res.text())
             return resJson['f']
 
@@ -109,7 +111,8 @@ class Manager(object):
         self.username = input('username: ')
         self.password = getpass('password: ')
         self.downloadPath = input('Where to save coursewares: ')
-        self.isFromUCAS = input('Whether you are graduated from UCAS(for UCAS undergraduates) Y/N: ')
+        self.isFromUCAS = input(
+            'Whether you are graduated from UCAS(for UCAS undergraduates) Y/N: ')
         if self.isFromUCAS.upper() == 'Y':
             self.studentID = input('Your current student ID: ')
         return [self.username, self.password, self.downloadPath, self.isFromUCAS, self.studentID, 'default']
@@ -131,14 +134,9 @@ class Manager(object):
 
     async def login(self):
         async with self.sess.post(
-                'http://onestop.ucas.ac.cn/Ajax/Login/0', headers=HTTP_HDRS['post'], data=self.loginInfo) as res:
+                LOGIN_URL, headers=HTTP_HDRS['post'], data=self.loginInfo) as res:
             resJson = json.loads(await res.text())
-            if resJson['f']:
-                url, parm = resJson['msg'].split('?')
-            else:
-                print(f"{resJson['msg']}！\n请重新运行并输入账号密码。")
-                self.updateUserInfo()
-                exit(0)
+            url, parm = resJson['msg'].split('?')
         async with self.sess.get(url, headers=HTTP_HDRS['get'], params=parm) as res:
             soup = BeautifulSoup(await res.text(), 'html.parser')
             self.printLoginInfo(soup)
@@ -155,12 +153,12 @@ class Manager(object):
             # print("courseWebsiteUrl=",courseWebsiteUrl)
             text = await fetch(self.sess, courseWebsiteUrl)
             if self.isFromUCAS.upper() == 'Y':
-                param = {'anotherUser' : self.studentID}
+                param = {'anotherUser': self.studentID}
                 # Must use https here
-                text = await fetch (self.sess, "https://course.ucas.ac.cn/portal", params=param)
+                text = await fetch(self.sess, "https://course.ucas.ac.cn/portal", params=param)
             bsObj = BeautifulSoup(text, "html.parser")
             allCoursesUrl = bsObj.find(
-                'a', {'class': "Mrphs-toolsNav__menuitem--link", 'title' :"我的课程 - 查看或加入站点"}).get("href")
+                'a', {'class': "Mrphs-toolsNav__menuitem--link", 'title': "我的课程 - 查看或加入站点"}).get("href")
             # print("allCoursesUrl=",allCoursesUrl)
             if self.isFromUCAS.upper() == 'Y':
                 allCoursesUrl = allCoursesUrl.replace("sep", "course")
@@ -174,18 +172,20 @@ class Manager(object):
                 course = {}
                 course["name"] = courseInfo.find('a').get('title')
                 course["url"] = courseInfo.find('a').get('href')
-                print(f'[{ctime()}] Find course {course["name"]}')
+                # print(f'[{ctime()}] Find course {course["name"]}')
                 self.coursesList.append(course)
         except Exception as e:
-            print("exception is",e)
+            print("exception is", e)
             print("[ERROR]: 请检查网络连接！（可能网速较慢）")
             exit(0)
 
     def setupCourseware(self):
-        self.coursewareManager = CoursewareManager(self.sess, self.downloadPath, self.coursesList, self.db)
-    
+        self.coursewareManager = CoursewareManager(
+            self.sess, self.downloadPath, self.coursesList, self.db)
+
     def setupVideo(self):
-        self.videoManager = VideoManager(self.sess, self.downloadPath, self.coursesList, self.db)
+        self.videoManager = VideoManager(
+            self.sess, self.downloadPath, self.coursesList, self.db)
 
     async def initialize(self):
         await self.checkUser()
@@ -194,27 +194,27 @@ class Manager(object):
         commandLine = "Please choose download objects:\n\t1: 下载课件\n\t2: 下载视频\n\t3: 下载课件和视频\nMode = "
         mode = int(input(commandLine))
         if (mode & 0b01):
-            self.coursewareManager = CoursewareManager(self.sess, self.downloadPath, self.coursesList, self.db)
+            self._managers['courseware'] = CoursewareManager(
+                self.sess, self.downloadPath, self.coursesList, self.db)
         if (mode & 0b10):
-            self.videoManager = VideoManager(self.sess, self.downloadPath, self.coursesList, self.db)
+            self._managers['video'] = VideoManager(
+                self.sess, self.downloadPath, self.coursesList, self.db)
 
     async def run(self):
         """Run the pipeline"""
         start = datetime.now()
         await self.initialize()
         try:
-            # print(f'[{ctime()}] Going to arrange downloading tasks.')
-            # await self.runDownloaders()
-            await self.coursewareManager.run()
-            await self.videoManager.run()
-            # self.report()
+            for _, manager in self._managers.items():
+                await manager.run()
             stop = datetime.now()
             print(f'[{ctime()}] All downloaders cost',
                   (stop-start).total_seconds(), 'seconds.')
-            # self.report()
         except Exception as e:
-            print(f"[{sys._getframe().f_code.co_name}:{sys._getframe().f_lineno}] Exception", e, type(e))
+            print(
+                f"[{sys._getframe().f_code.co_name}:{sys._getframe().f_lineno}] Exception", e, type(e))
             exit(0)
+
 
 class BasicManager(object):
     def __init__(self, session, downloadPath, coursesList, db, dType="basic"):
@@ -232,14 +232,16 @@ class BasicManager(object):
         print(f"Please choose courses to download {self._type}.")
         for i, course in enumerate(self.coursesList):
             print(f"\t{i}\t{course['name']}")
-        downloadAll = input(f"Do you want to download {self._type}s of all courses?('Y' or 'N'): ")
+        downloadAll = input(
+            f"Do you want to download {self._type}s of all courses?('Y' or 'N'): ")
         if downloadAll.upper() == "Y":
             return
         print("Please type serial numbers of courses in one line and seperate them with *SPACE*.")
         print("e.g. '1 2 3 4 5'")
         ""
         courseNum = len(self.coursesList)
-        numbers = list(filter(lambda x: x.isdigit() and int(x) < courseNum, input().split(' ')))
+        numbers = list(filter(lambda x: x.isdigit() and int(x)
+                              < courseNum, input().split(' ')))
         numbers = list(map(lambda x: int(x), numbers))
         self.coursesList = [self.coursesList[idx] for idx in numbers]
         print("Chosen courses are as follows:")
@@ -250,13 +252,15 @@ class BasicManager(object):
         self._messages[mode].append(msg)
 
     def report(self):
-        print(f"\n[{ctime()}] {'*'*6} REPORT OF {self._type.upper()} MANAGER START {'*'*6}.")
+        print(
+            f"\n[{ctime()}] {'*'*6} REPORT OF {self._type.upper()} MANAGER START {'*'*6}.")
         for key, messages in self._messages.items():
             for msg in messages:
                 print(f"[{ctime()}] {key.upper()}: {msg}")
             if len(messages) == 0:
                 print(f"[{ctime()}] There are no {key} {self._type}s.")
-        print(f"[{ctime()}] {'*'*6} REPORT OF {self._type.upper()} MANAGER END {'*'*6}.")
+        print(
+            f"[{ctime()}] {'*'*6} REPORT OF {self._type.upper()} MANAGER END {'*'*6}.")
 
     async def reDirectToTargetPage(self, courseUrl):
         """ Redirect page to target page.
@@ -281,7 +285,8 @@ class BasicManager(object):
                 return [resourcePageUrl, resourcePageObj]
             return resourcePageObj
         except Exception as e:
-            print(f"[{sys._getframe().f_code.co_name}:{sys._getframe().f_lineno}] Exception", e, type(e))
+            print(
+                f"[{sys._getframe().f_code.co_name}:{sys._getframe().f_lineno}] Exception", e, type(e))
             return None
 
     async def getTargetInfo(self, course):
@@ -306,12 +311,15 @@ class BasicManager(object):
                   (stop-start).total_seconds(), 'seconds.')
             self.report()
         except Exception as e:
-            print(f"[{sys._getframe().f_code.co_name}:{sys._getframe().f_lineno}] Exception", e, type(e))
+            print(
+                f"[{sys._getframe().f_code.co_name}:{sys._getframe().f_lineno}] Exception", e, type(e))
             exit(0)
+
 
 class CoursewareManager(BasicManager):
     def __init__(self, session, downloadPath, coursesList, db):
-        super(CoursewareManager, self).__init__(session, downloadPath, coursesList, db, dType="courseware")
+        super(CoursewareManager, self).__init__(
+            session, downloadPath, coursesList, db, dType="courseware")
 
     async def getResourceInfos(self, resourcePageObj, parentDir=""):
         """ Get the information of coursewares.
@@ -474,7 +482,8 @@ class CoursewareManager(BasicManager):
 
 class VideoManager(BasicManager):
     def __init__(self, session, downloadPath, coursesList, db):
-        super(VideoManager, self).__init__(session, downloadPath, coursesList, db, dType="video")
+        super(VideoManager, self).__init__(
+            session, downloadPath, coursesList, db, dType="video")
 
     def getVideoIdAndDate(self, soup):
         infos = []
@@ -483,8 +492,10 @@ class VideoManager(BasicManager):
         for div in videoDivs:
             videoId = div.find("a").get('onclick').strip(
                 "gotoPlay('").split(',')[0].strip("'")
-            date = list(filter(lambda x: "上传时间" in x.get_text(), div.find_all("div", {"class": "col_1"})))
-            limit = list(filter(lambda x: "视频预计" in x.get_text(), div.find_all("div", {"class": "col_1"})))
+            date = list(filter(lambda x: "上传时间" in x.get_text(),
+                               div.find_all("div", {"class": "col_1"})))
+            limit = list(filter(lambda x: "视频预计" in x.get_text(),
+                                div.find_all("div", {"class": "col_1"})))
             if limit != []:
                 continue
             try:
@@ -505,7 +516,8 @@ class VideoManager(BasicManager):
                 "h2", {"style": "margin-left: 2em;margin-top: 10px"}).get_text()
             return name, url
         except Exception as e:
-            print(f"[{sys._getframe().f_code.co_name}:{sys._getframe().f_lineno}] Exception", e, type(e))
+            print(
+                f"[{sys._getframe().f_code.co_name}:{sys._getframe().f_lineno}] Exception", e, type(e))
             return "", ""
 
     async def getTargetInfo(self, courseInfo):
