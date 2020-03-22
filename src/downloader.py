@@ -11,10 +11,12 @@ import asyncio
 import os
 import sys
 from src.configs import (SQL_CMD, HTTP_HDRS)
+from src.logger import (logError, logInfo, logDebug)
 
 
 class BasicDownloader(object):
     def __init__(self, manager, name, url, path, date, db, dType="basic"):
+        self.sql = SQL_CMD[dType]
         self.manager = manager
         self.course = name
         self.path = path
@@ -25,10 +27,9 @@ class BasicDownloader(object):
         try:
             self.cursor = self.db.cursor()
         except Exception as e:
-            print(
-                f"[{sys._getframe().f_code.co_name}:{sys._getframe().f_lineno}] ", type(e), e)
+            logError(f'{type(e)}, {e}')
+            sys.exit(1)
 
-        self.sql = SQL_CMD[dType]
 
     def addMessage(self, mode, msg):
         self.manager.addReportMessage(mode, msg)
@@ -67,11 +68,9 @@ class BasicDownloader(object):
                 'new', f"{self.course}/{os.path.basename(self.path)}")
             self.insert()
         elif self.needUpdate():
-            print('date', self.date)
-            print('dbdate', self.recordDate)
             self.addMessage(
                 'update', f"{self.course}/{os.path.basename(self.path)}")
-            print(f'{self.path} already exists but need to be updated.')
+            # print(f'{self.path} already exists but need to be updated.')
             self.update()
         else:
             # print(f'{self.path} already exists and does not need to be updated.')
@@ -97,7 +96,7 @@ class CoursewareDownloader(BasicDownloader):
         if not self.needDownload():
             return
         try:
-            print(f"Downloading {self.course}/{os.path.basename(self.path)}...")
+            logInfo(f"Downloading {self.course}/{os.path.basename(self.path)}...")
             async with session.get(self.url, headers=HTTP_HDRS['normal'], timeout=20) as resp:
                 with open(self.path, 'wb') as fd:
                     while True:
@@ -108,8 +107,7 @@ class CoursewareDownloader(BasicDownloader):
         except Exception as e:
             self.addMessage(
                 'error', f"Please manually check {self.course}/{os.path.basename(self.path)}.")
-            print(
-                f"[{sys._getframe().f_code.co_name}:{sys._getframe().f_lineno}] ", type(e), e)
+            logError(f'{type(e)}, {e}')
 
 
 class VideoDownloader(BasicDownloader):
@@ -134,5 +132,4 @@ class VideoDownloader(BasicDownloader):
         except Exception as e:
             self.addMessage(
                 'error', f"Please manually check {self.course}/{os.path.basename(self.path)}.")
-            print(
-                f"[{sys._getframe().f_code.co_name}:{sys._getframe().f_lineno}] ", type(e), e)
+            logError(f'{type(e)}, {e}')

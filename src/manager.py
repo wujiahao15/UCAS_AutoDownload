@@ -23,6 +23,7 @@ from urllib import parse
 
 from src.configs import (HTTP_HDRS, SQL_CMD, TARGET_PAGE_TAG, LOGIN_URL)
 from src.downloader import (CoursewareDownloader, VideoDownloader)
+from src.logger import (logError, logInfo, logDebug)
 
 
 async def fetch(session, url, timeout=10, params=None):
@@ -39,19 +40,18 @@ class Manager(object):
         self.username = ''
         self.password = ''
         self.downloadPath = ''
-        self.isFromUCAS = ''
+        self.isFromUCAS = 'N'
         self.studentID = ''
         try:
             self.checkDatebase()
         except Exception as e:
-            print('[checkDatebase]:', type(e), e)
+            logError(f'{type(e)}, {e}')
             exit(1)
 
     def checkDatebase(self):
         if not os.path.exists(self.databasePath):
             self.db = sqlite3.connect(self.databasePath)
             c = self.db.cursor()
-            # list(map(lambda table: c.execute(table['create']), SQL_CMD))
             dict(map(lambda item: (item[0], c.execute(
                 item[1]['create'])), SQL_CMD.items()))
             self.db.commit()
@@ -59,47 +59,45 @@ class Manager(object):
             self.db = sqlite3.connect(self.databasePath)
 
     async def checkUser(self):
+        self.useCache = input("Do you want to use cache? (Y/N): ").upper()
+        c = self.db.cursor()
         while True:
-            c = self.db.cursor()
-            result = c.execute(SQL_CMD["user"]["lookup"]).fetchone()
-            useCache = input("Do you want to use cache(Y/N)?: ")
-            if useCache.upper() == "Y":
+            if self.useCache == "Y":
+                result = c.execute(SQL_CMD["user"]["lookup"]).fetchone()
                 if result != None:
                     self.username, self.password, self.downloadPath, self.isFromUCAS, self.studentID, _ = result
-                    print('Cached info loaded.')
+                    logInfo('Cached information loaded.')
                 else:
                     insertValues = self.getUserInfo()
                     c.execute(SQL_CMD["user"]["insert"], insertValues)
                     self.db.commit()
-                    print('Info cached.')
+                    logInfo('Login information cached.')
             else:
-                if result != None:
-                    self.updateUserInfo()
-                else:
-                    print('No cached info detected, please input')
-                    insertValues = self.getUserInfo()
-                    c.execute(SQL_CMD["user"]["insert"], insertValues)
-                    self.db.commit()
-                    print('Info cached.')
-            self.loginInfo = {
-                'username': self.username,
-                'password': self.password,
-                'remember': 'checked'
-            }
+                self.getUserInfo()
+            self.setLoginInfo()
             success = await self.tryToLogin()
             if not success:
                 print(
-                    "Failed to login.\nPlease enter your username and password again, and make sure it is right!")
-                self.updateUserInfo()
+                    "Failed to login.\nPlease enter your username and password again, and make sure they are right!")
+                if self.useCache == "Y":
+                    self.updateUserInfo()
             else:
                 break
 
+    def setLoginInfo(self):
+        self.loginInfo = {
+            'username': self.username,
+            'password': self.password,
+            'remember': 'checked'
+        }
+
     def updateUserInfo(self):
         values = self.getUserInfo()
-        c = self.db.cursor()
-        c.execute(SQL_CMD["user"]["update"], values[:-1])
-        self.db.commit()
-        print('Info updated.')
+        if self.useCache == "Y":
+            c = self.db.cursor()
+            c.execute(SQL_CMD["user"]["update"], values[:-1])
+            self.db.commit()
+            logInfo('User information is updated.')
 
     async def tryToLogin(self):
         async with self.sess.post(
@@ -111,26 +109,26 @@ class Manager(object):
         self.username = input('username: ')
         self.password = getpass('password: ')
         self.downloadPath = input('Where to save coursewares: ')
-        self.isFromUCAS = input(
-            'Whether you are graduated from UCAS(for UCAS undergraduates) Y/N: ')
-        if self.isFromUCAS.upper() == 'Y':
-            self.studentID = input('Your current student ID: ')
+        # self.isFromUCAS = input(
+            # 'Whether you are graduated from UCAS(for UCAS undergraduates) Y/N: ').upper()
+        # if self.isFromUCAS.upper() == 'Y':
+            # self.studentID = input('Your current student ID: ')
         return [self.username, self.password, self.downloadPath, self.isFromUCAS, self.studentID, 'default']
 
     def printLoginInfo(self, soup):
         nameTag = soup.find(
             "li", {"class": "btnav-info", "title": "当前用户所在单位"})
         if nameTag is None:
-            print("[ERROR]: 登录失败，请核对用户名和密码")
+            logError("登录失败，请核对用户名和密码")
             exit(0)
         name = nameTag.get_text()
         match = re.compile(r"\s*(\S*)\s*(\S*)\s*").match(name)
         if not match:
-            print("[ERROR]: 脚本运行错误")
+            logError("脚本运行错误")
             exit("找不到用户名和单位")
         institute = match.group(1)
         name = match.group(2)
-        print(f'[{ctime()}] {institute} {name} 登录成功！')
+        logInfo(f'{institute} {name} 登录成功！')
 
     async def login(self):
         async with self.sess.post(
@@ -142,28 +140,58 @@ class Manager(object):
             self.printLoginInfo(soup)
         await fetch(self.sess, "http://sep.ucas.ac.cn/appStore")
 
+    def checkAnotherUser(self, soup):
+        tabs = soup.find_all(
+            'li', {'class': 'Mrphs-userNav__submenuitem Mrphs-userNav__submenuitem-indented'})
+        tabs = list(map(lambda x: x.find('a'), tabs))
+        pattern = re.compile(r'^\d{4}[k,\d]\d{10}$')
+        anotherUserList = list(
+            filter(lambda x: pattern.match(x.get_text()) != None, tabs))
+        if len(anotherUserList) == 0:
+            return None
+        try:
+            anotherUser = anotherUserList[0].get_text()
+        except Exception as e:
+            logError(f'{type(e)}, {e}')
+            exit(0)
+        return anotherUser
+
     async def fetchCourseUrls(self):
         """ Get all the course information. """
-        print(f'[{ctime()}] Fetch course urls...')
         try:
             text = await fetch(self.sess, "http://sep.ucas.ac.cn/portal/site/16/801")
             bsObj = BeautifulSoup(text, "html.parser")
             courseWebsiteUrl = bsObj.find(
                 'noscript').meta.get("content")[6:]
-            # print("courseWebsiteUrl=",courseWebsiteUrl)
             text = await fetch(self.sess, courseWebsiteUrl)
             if self.isFromUCAS.upper() == 'Y':
-                param = {'anotherUser': self.studentID}
                 # Must use https here
-                text = await fetch(self.sess, "https://course.ucas.ac.cn/portal", params=param)
+                text = await fetch(self.sess, "https://course.ucas.ac.cn/portal", params={'anotherUser': self.studentID})
             bsObj = BeautifulSoup(text, "html.parser")
-            allCoursesUrl = bsObj.find(
+            anotherUser = self.checkAnotherUser(bsObj)
+            if anotherUser != None and self.isFromUCAS.upper() != 'Y':
+                print("Another user detected.")
+                currentUser = bsObj.find('div', {'class': 'Mrphs-userNav__submenuitem--displayid'}).get_text().strip()
+                print(f"Current user: {currentUser}")
+                print(f"Another user: {anotherUser}")
+                change = input("Do you want to change to another user and set it as default(if use cache)? (Y/N): ")
+                if change.upper() == "Y":
+                    # Must use https here
+                    text = await fetch(self.sess, "https://course.ucas.ac.cn/portal", params={'anotherUser': anotherUser})
+                    bsObj = BeautifulSoup(text, "html.parser")
+                    if self.useCache.upper() == "Y":
+                        self.isFromUCAS = "Y"
+                        self.studentID = anotherUser
+                        c = self.db.cursor()
+                        values = [self.username, self.password, self.downloadPath, self.isFromUCAS, self.studentID]
+                        c.execute(SQL_CMD["user"]["update"], values)
+                        self.db.commit()
+            # below is to find course urls
+            logInfo(f'Fetching course urls...')
+            allCoursesTab = bsObj.find(
                 'a', {'class': "Mrphs-toolsNav__menuitem--link", 'title': "我的课程 - 查看或加入站点"}).get("href")
-            # print("allCoursesUrl=",allCoursesUrl)
-            if self.isFromUCAS.upper() == 'Y':
-                allCoursesUrl = allCoursesUrl.replace("sep", "course")
-            # print("allCoursesUrl=",allCoursesUrl)
-            text = await fetch(self.sess, allCoursesUrl)
+            # logDebug(f"allCoursesTab = {allCoursesTab}")
+            text = await fetch(self.sess, allCoursesTab)
             bsObj = BeautifulSoup(text, "html.parser")
             allCoursesInfo = bsObj.find(
                 'ul', {'class': "otherSitesCategorList favoriteSiteList"}).find_all('div', {'class': "fav-title"})
@@ -172,20 +200,12 @@ class Manager(object):
                 course = {}
                 course["name"] = courseInfo.find('a').get('title')
                 course["url"] = courseInfo.find('a').get('href')
+                logInfo(f'Find course {course["name"]}')
                 # print(f'[{ctime()}] Find course {course["name"]}')
                 self.coursesList.append(course)
         except Exception as e:
-            print("exception is", e)
-            print("[ERROR]: 请检查网络连接！（可能网速较慢）")
+            logError(f'{type(e)}, {e}')
             exit(0)
-
-    def setupCourseware(self):
-        self.coursewareManager = CoursewareManager(
-            self.sess, self.downloadPath, self.coursesList, self.db)
-
-    def setupVideo(self):
-        self.videoManager = VideoManager(
-            self.sess, self.downloadPath, self.coursesList, self.db)
 
     async def initialize(self):
         await self.checkUser()
@@ -202,17 +222,12 @@ class Manager(object):
 
     async def run(self):
         """Run the pipeline"""
-        start = datetime.now()
         await self.initialize()
         try:
             for _, manager in self._managers.items():
                 await manager.run()
-            stop = datetime.now()
-            print(f'[{ctime()}] All downloaders cost',
-                  (stop-start).total_seconds(), 'seconds.')
         except Exception as e:
-            print(
-                f"[{sys._getframe().f_code.co_name}:{sys._getframe().f_lineno}] Exception", e, type(e))
+            logError(f'{type(e)}, {e}')
             exit(0)
 
 
@@ -247,20 +262,21 @@ class BasicManager(object):
         print("Chosen courses are as follows:")
         for course in self.coursesList:
             print(f"{course['name']}")
+        print()
 
     def addReportMessage(self, mode, msg):
         self._messages[mode].append(msg)
 
     def report(self):
-        print(
-            f"\n[{ctime()}] {'*'*6} REPORT OF {self._type.upper()} MANAGER START {'*'*6}.")
+        logInfo(
+            f"{'*'*6} REPORT OF {self._type.upper()} MANAGER START {'*'*6}.")
         for key, messages in self._messages.items():
             for msg in messages:
-                print(f"[{ctime()}] {key.upper()}: {msg}")
+                logInfo(f"{key.upper()}: {msg}")
             if len(messages) == 0:
-                print(f"[{ctime()}] There are no {key} {self._type}s.")
-        print(
-            f"[{ctime()}] {'*'*6} REPORT OF {self._type.upper()} MANAGER END {'*'*6}.")
+                logInfo(f"There are no {key} {self._type}s.")
+        logInfo(
+            f"{'*'*6} REPORT OF {self._type.upper()} MANAGER END {'*'*6}.")
 
     async def reDirectToTargetPage(self, courseUrl):
         """ Redirect page to target page.
@@ -304,15 +320,14 @@ class BasicManager(object):
         await self.getResourceInfoList()
         start = datetime.now()
         try:
-            print(f'[{ctime()}] Going to arrange downloading {self._type} tasks.')
+            logInfo(f'Going to arrange downloading {self._type} tasks.')
             await self.runDownloaders()
             stop = datetime.now()
-            print(f'[{ctime()}] All downloaders cost',
-                  (stop-start).total_seconds(), 'seconds.')
+            logInfo(
+                f'All downloaders cost {(stop-start).total_seconds()} seconds.')
             self.report()
         except Exception as e:
-            print(
-                f"[{sys._getframe().f_code.co_name}:{sys._getframe().f_lineno}] Exception", e, type(e))
+            logError(f'{type(e)}, {e}')
             exit(0)
 
 
@@ -516,8 +531,7 @@ class VideoManager(BasicManager):
                 "h2", {"style": "margin-left: 2em;margin-top: 10px"}).get_text()
             return name, url
         except Exception as e:
-            print(
-                f"[{sys._getframe().f_code.co_name}:{sys._getframe().f_lineno}] Exception", e, type(e))
+            logError(f'{type(e)}, {e}')
             return "", ""
 
     async def getTargetInfo(self, courseInfo):
