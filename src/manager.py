@@ -23,7 +23,7 @@ from urllib import parse
 
 from src.configs import (HTTP_HDRS, SQL_CMD, TARGET_PAGE_TAG, LOGIN_URL)
 from src.downloader import (CoursewareDownloader, VideoDownloader)
-from src.logger import (logError, logInfo, logDebug)
+from src.logger import logger
 
 
 async def fetch(session, url, timeout=10, params=None):
@@ -45,7 +45,7 @@ class Manager(object):
         try:
             self.checkDatebase()
         except Exception as e:
-            logError(f'{type(e)}, {e}')
+            logger.error(f'{type(e)}, {e}')
             exit(1)
 
     def checkDatebase(self):
@@ -66,12 +66,12 @@ class Manager(object):
                 result = c.execute(SQL_CMD["user"]["lookup"]).fetchone()
                 if result != None:
                     self.username, self.password, self.downloadPath, self.isFromUCAS, self.studentID, _ = result
-                    logInfo('Cached information loaded.')
+                    logger.info('Cached information loaded.')
                 else:
                     insertValues = self.getUserInfo()
                     c.execute(SQL_CMD["user"]["insert"], insertValues)
                     self.db.commit()
-                    logInfo('Login information cached.')
+                    logger.info('Login information cached.')
             else:
                 self.getUserInfo()
             self.setLoginInfo()
@@ -97,7 +97,7 @@ class Manager(object):
             c = self.db.cursor()
             c.execute(SQL_CMD["user"]["update"], values[:-1])
             self.db.commit()
-            logInfo('User information is updated.')
+            logger.info('User information is updated.')
 
     async def tryToLogin(self):
         async with self.sess.post(
@@ -119,16 +119,16 @@ class Manager(object):
         nameTag = soup.find(
             "li", {"class": "btnav-info", "title": "当前用户所在单位"})
         if nameTag is None:
-            logError("登录失败，请核对用户名和密码")
+            logger.error("登录失败，请核对用户名和密码")
             exit(0)
         name = nameTag.get_text()
         match = re.compile(r"\s*(\S*)\s*(\S*)\s*").match(name)
         if not match:
-            logError("脚本运行错误")
+            logger.error("脚本运行错误")
             exit("找不到用户名和单位")
         institute = match.group(1)
         name = match.group(2)
-        logInfo(f'{institute} {name} 登录成功！')
+        logger.info(f'{institute} {name} 登录成功！')
 
     async def login(self):
         async with self.sess.post(
@@ -152,7 +152,7 @@ class Manager(object):
         try:
             anotherUser = anotherUserList[0].get_text()
         except Exception as e:
-            logError(f'{type(e)}, {e}')
+            logger.error(f'{type(e)}, {e}')
             exit(0)
         return anotherUser
 
@@ -187,7 +187,7 @@ class Manager(object):
                         c.execute(SQL_CMD["user"]["update"], values)
                         self.db.commit()
             # below is to find course urls
-            logInfo(f'Fetching course urls...')
+            logger.info(f'Fetching course urls...')
             allCoursesTab = bsObj.find(
                 'a', {'class': "Mrphs-toolsNav__menuitem--link", 'title': "我的课程 - 查看或加入站点"}).get("href")
             # logDebug(f"allCoursesTab = {allCoursesTab}")
@@ -200,11 +200,11 @@ class Manager(object):
                 course = {}
                 course["name"] = courseInfo.find('a').get('title')
                 course["url"] = courseInfo.find('a').get('href')
-                logInfo(f'Find course {course["name"]}')
+                logger.info(f'Find course {course["name"]}')
                 # print(f'[{ctime()}] Find course {course["name"]}')
                 self.coursesList.append(course)
         except Exception as e:
-            logError(f'{type(e)}, {e}')
+            logger.error(f'{type(e)}, {e}')
             exit(0)
 
     async def initialize(self):
@@ -227,7 +227,7 @@ class Manager(object):
             for _, manager in self._managers.items():
                 await manager.run()
         except Exception as e:
-            logError(f'{type(e)}, {e}')
+            logger.error(f'{type(e)}, {e}')
             exit(0)
 
 
@@ -268,14 +268,14 @@ class BasicManager(object):
         self._messages[mode].append(msg)
 
     def report(self):
-        logInfo(
+        logger.info(
             f"{'*'*6} REPORT OF {self._type.upper()} MANAGER START {'*'*6}.")
         for key, messages in self._messages.items():
             for msg in messages:
-                logInfo(f"{key.upper()}: {msg}")
+                logger.info(f"{key.upper()}: {msg}")
             if len(messages) == 0:
-                logInfo(f"There are no {key} {self._type}s.")
-        logInfo(
+                logger.info(f"There are no {key} {self._type}s.")
+        logger.info(
             f"{'*'*6} REPORT OF {self._type.upper()} MANAGER END {'*'*6}.")
 
     async def reDirectToTargetPage(self, courseUrl):
@@ -320,14 +320,14 @@ class BasicManager(object):
         await self.getResourceInfoList()
         start = datetime.now()
         try:
-            logInfo(f'Going to arrange downloading {self._type} tasks.')
+            logger.info(f'Going to arrange downloading {self._type} tasks.')
             await self.runDownloaders()
             stop = datetime.now()
-            logInfo(
+            logger.info(
                 f'All downloaders cost {(stop-start).total_seconds()} seconds.')
             self.report()
         except Exception as e:
-            logError(f'{type(e)}, {e}')
+            logger.error(f'{type(e)}, {e}')
             exit(0)
 
 
@@ -531,7 +531,7 @@ class VideoManager(BasicManager):
                 "h2", {"style": "margin-left: 2em;margin-top: 10px"}).get_text()
             return name, url
         except Exception as e:
-            logError(f'{type(e)}, {e}')
+            logger.error(f'{type(e)}, {e}')
             return "", ""
 
     async def getTargetInfo(self, courseInfo):

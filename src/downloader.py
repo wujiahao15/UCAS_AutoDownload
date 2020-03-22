@@ -11,7 +11,7 @@ import asyncio
 import os
 import sys
 from src.configs import (SQL_CMD, HTTP_HDRS)
-from src.logger import (logError, logInfo, logDebug)
+from src.logger import logger
 
 
 class BasicDownloader(object):
@@ -27,7 +27,7 @@ class BasicDownloader(object):
         try:
             self.cursor = self.db.cursor()
         except Exception as e:
-            logError(f'{type(e)}, {e}')
+            logger.error(f'{type(e)}, {e}')
             sys.exit(1)
 
 
@@ -96,7 +96,7 @@ class CoursewareDownloader(BasicDownloader):
         if not self.needDownload():
             return
         try:
-            logInfo(f"Downloading {self.course}/{os.path.basename(self.path)}...")
+            logger.info(f"Downloading {self.course}/{os.path.basename(self.path)}...")
             async with session.get(self.url, headers=HTTP_HDRS['normal'], timeout=20) as resp:
                 with open(self.path, 'wb') as fd:
                     while True:
@@ -107,7 +107,7 @@ class CoursewareDownloader(BasicDownloader):
         except Exception as e:
             self.addMessage(
                 'error', f"Please manually check {self.course}/{os.path.basename(self.path)}.")
-            logError(f'{type(e)}, {e}')
+            logger.error(f'{type(e)}, {e}')
 
 
 class VideoDownloader(BasicDownloader):
@@ -132,4 +132,4 @@ class VideoDownloader(BasicDownloader):
         except Exception as e:
             self.addMessage(
                 'error', f"Please manually check {self.course}/{os.path.basename(self.path)}.")
-            logError(f'{type(e)}, {e}')
+            logger.error(f'{type(e)}, {e}')
