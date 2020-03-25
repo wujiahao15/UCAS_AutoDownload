@@ -30,7 +30,6 @@ class BasicDownloader(object):
             logger.error(f'{type(e)}, {e}')
             sys.exit(1)
 
-
     def addMessage(self, mode, msg):
         self.manager.addReportMessage(mode, msg)
 
@@ -56,11 +55,15 @@ class BasicDownloader(object):
             self.recordDate = self.cursor.execute(
                 self.sql['lookup'], [self.path]).fetchone()[0]
         except:
-            # print('[ERROR]', self.path, type(e), e)
+            # logger.error(f'{type(e)}, {e}')
             tag = False
         return tag
 
     def needDownload(self):
+        """ Download conditions: 
+            1. file not in db
+            2. file in db but need to update
+        """
         tag = True
         if not self.isFileInDatebase():
             # print(f'{self.path} does not exist and insert it into database.')
@@ -89,14 +92,11 @@ class CoursewareDownloader(BasicDownloader):
 
     async def run(self, session):
         """ Run the main downloading task. """
-        """ Download conditions: 
-            1. file not in db
-            2. file in db but need to update
-        """
         if not self.needDownload():
             return
         try:
-            logger.info(f"Downloading {self.course}/{os.path.basename(self.path)}...")
+            logger.info(
+                f"Downloading {self.course}/{os.path.basename(self.path)}...")
             async with session.get(self.url, headers=HTTP_HDRS['normal'], timeout=20) as resp:
                 with open(self.path, 'wb') as fd:
                     while True:
@@ -122,7 +122,7 @@ class VideoDownloader(BasicDownloader):
         if not self.needDownload():
             return
         try:
-            cmd = f"youtube-dl -o {self.path}.mp4 {self.url}"
+            cmd = f"youtube-dl -o {self.path} {self.url}"
             # cmd = f"echo 'youtube-dl -o {self.path}.mp4 {self.url}'"
             proc = await asyncio.create_subprocess_shell(
                 cmd,

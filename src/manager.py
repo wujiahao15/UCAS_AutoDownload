@@ -100,19 +100,19 @@ class Manager(object):
             logger.info('User information is updated.')
 
     async def tryToLogin(self):
-        async with self.sess.post(
-                LOGIN_URL, headers=HTTP_HDRS['post'], data=self.loginInfo) as res:
-            resJson = json.loads(await res.text())
-            return resJson['f']
+        try:
+            async with self.sess.post(
+                LOGIN_URL, headers=HTTP_HDRS['post'], data=self.loginInfo, timeout=10) as res:
+                resJson = json.loads(await res.text())
+                return resJson['f']
+        except Exception as e:
+            logger.error(f'{type(e)}, {e} login failed.')
+            exit()
 
     def getUserInfo(self):
         self.username = input('username: ')
         self.password = getpass('password: ')
         self.downloadPath = input('Where to save coursewares: ')
-        # self.isFromUCAS = input(
-            # 'Whether you are graduated from UCAS(for UCAS undergraduates) Y/N: ').upper()
-        # if self.isFromUCAS.upper() == 'Y':
-            # self.studentID = input('Your current student ID: ')
         return [self.username, self.password, self.downloadPath, self.isFromUCAS, self.studentID, 'default']
 
     def printLoginInfo(self, soup):
@@ -195,7 +195,6 @@ class Manager(object):
             bsObj = BeautifulSoup(text, "html.parser")
             allCoursesInfo = bsObj.find(
                 'ul', {'class': "otherSitesCategorList favoriteSiteList"}).find_all('div', {'class': "fav-title"})
-            # print("allCoursesInfo" , allCoursesInfo)
             for courseInfo in allCoursesInfo:
                 course = {}
                 course["name"] = courseInfo.find('a').get('title')
