@@ -555,7 +555,8 @@ class VideoManager(BasicManager):
 
     def addDownloader(self, courseName, courseDir, videoInfo):
         name, url, date = videoInfo
-        path = os.path.join(courseDir, f"{name}.mp4")
+        # avoid the existance of space in file name
+        path = os.path.join(courseDir, f"{name.replace(' ', '_')}.mp4")
         # print(f"[{courseware['date']}]: {courseware['fileName']}")
         self._downloaders.append(VideoDownloader(
             self, courseName, url, path, date, self.db))
