@@ -64,7 +64,8 @@ HTTP_HDRS = {
 TARGET_PAGE_TAG = {
     "basic": {},
     "courseware": {"title": "资源 - 上传、下载课件，发布文档，网址等信息"},
-    "video": {"title": "课程视频 - 课程视频"}
+    "video": {"title": "课程视频 - 课程视频"},
+    "homework": {"title": "作业 - 在线发布、提交和批改作业"}
 }
 
 LOGIN_URL = 'http://onestop.ucas.ac.cn/Ajax/Login/0'

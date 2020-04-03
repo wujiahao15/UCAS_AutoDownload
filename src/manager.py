@@ -210,13 +210,16 @@ class Manager(object):
         await self.checkUser()
         await self.login()
         await self.fetchCourseUrls()
-        commandLine = "Please choose download objects:\n\t1: 下载课件\n\t2: 下载视频\n\t3: 下载课件和视频\nMode = "
+        commandLine = "Please choose download objects:\n\t1: 下载课件\n\t2: 下载视频\n\t3: 下载课件和视频\n\t4: 检查作业提交情况\nMode = "
         mode = int(input(commandLine))
         if (mode & 0b01):
             self._managers['courseware'] = CoursewareManager(
                 self.sess, self.downloadPath, self.coursesList, self.db)
         if (mode & 0b10):
             self._managers['video'] = VideoManager(
+                self.sess, self.downloadPath, self.coursesList, self.db)
+        if (mode & 0b100):
+            self._managers['homework'] = HomeworkManager(
                 self.sess, self.downloadPath, self.coursesList, self.db)
 
     async def run(self):
@@ -234,7 +237,7 @@ class BasicManager(object):
     def __init__(self, session, downloadPath, coursesList, db, dType="basic"):
         self._type = dType
         self._downloaders = []
-        self._messages = {'update': [], 'new': [], 'error': []}
+        self._messages = {'update': [], 'new': [], 'error': [], 'warning': []}
         self.sess = session
         self.downloadPath = downloadPath
         self.coursesList = coursesList
@@ -247,7 +250,7 @@ class BasicManager(object):
         for i, course in enumerate(self.coursesList):
             print(f"\t{i}\t{course['name']}")
         downloadAll = input(
-            f"Do you want to download {self._type}s of all courses?('Y' or 'N'): ")
+            f"Do you want to check {self._type}s of all courses?('Y' or 'N'): ")
         if downloadAll.upper() == "Y":
             return
         print("Please type serial numbers of courses in one line and seperate them with *SPACE*.")
@@ -296,13 +299,13 @@ class BasicManager(object):
                 'a', TARGET_PAGE_TAG[self._type]).get("href")
             text = await fetch(self.sess, resourcePageUrl)
             resourcePageObj = BeautifulSoup(text, 'html.parser')
-            if self._type == "video":
-                return [resourcePageUrl, resourcePageObj]
-            return resourcePageObj
+            # if self._type == "video":
+                # return [resourcePageUrl, resourcePageObj]
+            return resourcePageUrl,resourcePageObj
         except Exception as e:
             print(
                 f"[{sys._getframe().f_code.co_name}:{sys._getframe().f_lineno}] Exception", e, type(e))
-            return None
+            return None, None
 
     async def getTargetInfo(self, course):
         pass
@@ -469,7 +472,7 @@ class CoursewareManager(BasicManager):
         if not os.path.exists(courseDir):
             os.makedirs(courseDir)
         # redirect to the resource page of the course website
-        resourcePageObj = await self.reDirectToTargetPage(courseInfo["url"])
+        _, resourcePageObj = await self.reDirectToTargetPage(courseInfo["url"])
         if resourcePageObj == None:
             return False
         self.getUnfoldPostPattern(resourcePageObj)
@@ -565,3 +568,32 @@ class VideoManager(BasicManager):
         tasks = [downloader.createTask()
                  for downloader in self._downloaders]
         await asyncio.gather(*tasks)
+
+
+class HomeworkManager(BasicManager):
+    def __init__(self, session, downloadPath, coursesList, db):
+        super(HomeworkManager, self).__init__(
+            session, downloadPath, coursesList, db, dType="homework")
+        self._messages
+    
+    async def getTargetInfo(self, courseInfo):
+        self.videoInfos = []
+        courseName = courseInfo["name"]
+        # redirect to the resource page of the course website
+        _, resourcePageObj = await self.reDirectToTargetPage(courseInfo["url"])
+        if resourcePageObj == None:
+            return False
+        try:
+            homeworks = resourcePageObj.find_all("tr")[1:]
+            for homework in homeworks:
+                status = homework.find("td", {"headers": "status"}).get_text().strip()
+                if status == "尚未提交":
+                    name = homework.find("td", {"headers": "title"}).find("a").get_text()
+                    dueDate = homework.find("td", {"headers": "dueDate"}).find("span").get_text()
+                    self.addReportMessage("warning", f"{courseName}/{name}未提交，截止日期：{dueDate}")
+        except Exception as e:
+            logger.error(f'{type(e)}, {e}, in {courseName}')
+
+    async def run(self):
+        await self.getResourceInfoList()
+        self.report()
