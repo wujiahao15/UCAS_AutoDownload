@@ -15,14 +15,14 @@ from src.logger import logger
 
 
 class BasicDownloader(object):
-    def __init__(self, manager, name, url, path, date, db, dType="basic"):
-        self.sql = SQL_CMD[dType]
+    def __init__(self, manager, name, url, path, date, db, d_type="basic"):
+        self.sql = SQL_CMD[d_type]
         self.manager = manager
         self.course = name
         self.path = path
         self.url = url
         self.date = date
-        self.recordDate = ""
+        self.record_date = ""
         self.db = db
         try:
             self.cursor = self.db.cursor()
@@ -30,8 +30,8 @@ class BasicDownloader(object):
             logger.error(f'{type(e)}, {e}')
             sys.exit(1)
 
-    def addMessage(self, mode, msg):
-        self.manager.addReportMessage(mode, msg)
+    def add_message(self, mode, msg):
+        self.manager.add_report_message(mode, msg)
 
     def update(self):
         self.cursor.execute(self.sql['update'],
@@ -43,35 +43,35 @@ class BasicDownloader(object):
                             [self.path, self.url, self.date])
         self.db.commit()
 
-    def needUpdate(self):
+    def need_update(self):
         tag = True
-        if self.date == self.recordDate:
+        if self.date == self.record_date:
             tag = False
         return tag
 
-    def isFileInDatebase(self):
+    def is_file_in_datebase(self):
         tag = True
         try:
-            self.recordDate = self.cursor.execute(
+            self.record_date = self.cursor.execute(
                 self.sql['lookup'], [self.path]).fetchone()[0]
         except:
             # logger.error(f'{type(e)}, {e}')
             tag = False
         return tag
 
-    def needDownload(self):
+    def need_download(self):
         """ Download conditions: 
             1. file not in db
             2. file in db but need to update
         """
         tag = True
-        if not self.isFileInDatebase():
+        if not self.is_file_in_datebase():
             # print(f'{self.path} does not exist and insert it into database.')
-            self.addMessage(
+            self.add_message(
                 'new', f"{self.course}/{os.path.basename(self.path)}")
             self.insert()
-        elif self.needUpdate():
-            self.addMessage(
+        elif self.need_update():
+            self.add_message(
                 'update', f"{self.course}/{os.path.basename(self.path)}")
             # print(f'{self.path} already exists but need to be updated.')
             self.update()
@@ -84,15 +84,15 @@ class BasicDownloader(object):
 class CoursewareDownloader(BasicDownloader):
     def __init__(self, manager, name, url, path, date, db):
         super(CoursewareDownloader, self).__init__(
-            manager, name, url, path, date, db, dType="courseware")
-        self.chuckSize = (1 << 10)
+            manager, name, url, path, date, db, d_type="courseware")
+        self.chunk_size = (1 << 10)
 
-    def createTask(self, session):
+    def create_task(self, session):
         return asyncio.create_task(self.run(session))
 
     async def run(self, session):
         """ Run the main downloading task. """
-        if not self.needDownload():
+        if not self.need_download():
             return
         try:
             logger.info(
@@ -100,12 +100,12 @@ class CoursewareDownloader(BasicDownloader):
             async with session.get(self.url, headers=HTTP_HDRS['normal'], timeout=20) as resp:
                 with open(self.path, 'wb') as fd:
                     while True:
-                        chunk = await resp.content.read(self.chuckSize)
+                        chunk = await resp.content.read(self.chunk_size)
                         if not chunk:
                             break
                         fd.write(chunk)
         except Exception as e:
-            self.addMessage(
+            self.add_message(
                 'error', f"Please manually check {self.course}/{os.path.basename(self.path)}.")
             logger.error(f'{type(e)}, {e}')
 
@@ -113,13 +113,13 @@ class CoursewareDownloader(BasicDownloader):
 class VideoDownloader(BasicDownloader):
     def __init__(self, manager, name, url, path, date, db):
         super(VideoDownloader, self).__init__(
-            manager, name, url, path, date, db, dType="video")
+            manager, name, url, path, date, db, d_type="video")
 
-    def createTask(self):
+    def create_task(self):
         return asyncio.create_task(self.run())
 
     async def run(self):
-        if not self.needDownload():
+        if not self.need_download():
             return
         try:
             cmd = f"youtube-dl -o {self.path} {self.url}"
@@ -130,6 +130,6 @@ class VideoDownloader(BasicDownloader):
                 stderr=asyncio.subprocess.PIPE)
             _, __ = await proc.communicate()
         except Exception as e:
-            self.addMessage(
+            self.add_message(
                 'error', f"Please manually check {self.course}/{os.path.basename(self.path)}.")
             logger.error(f'{type(e)}, {e}')
